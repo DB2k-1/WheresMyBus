@@ -6,6 +6,7 @@ class BusArrival {
   final String lineName;
   final String direction;
   final String platformName;
+  final String currentStopCode;
 
   BusArrival({
     required this.routeId,
@@ -15,9 +16,10 @@ class BusArrival {
     required this.lineName,
     required this.direction,
     required this.platformName,
+    required this.currentStopCode,
   });
 
-  factory BusArrival.fromTflApi(List<dynamic> apiData) {
+  factory BusArrival.fromTflApi(List<dynamic> apiData, String currentStopCode) {
     // TfL API format: [1, "Stop Name", "Route", timestamp]
     // We'll need to parse this based on the actual API response structure
     return BusArrival(
@@ -28,6 +30,7 @@ class BusArrival {
       lineName: apiData[2]?.toString() ?? '',
       direction: '', // Not provided in this API format
       platformName: '', // Not provided in this API format
+      currentStopCode: currentStopCode,
     );
   }
 
@@ -50,7 +53,7 @@ class BusArrival {
 
   String get formattedTime {
     if (timeToStation <= 0) return 'Due';
-    if (timeToStation < 60) return '${timeToStation}s';
+    if (timeToStation < 60) return 'Under 1m';
     if (timeToStation < 3600) return '${(timeToStation / 60).round()}m';
     return '${(timeToStation / 3600).round()}h';
   }

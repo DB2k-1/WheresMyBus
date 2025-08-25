@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:wheres_my_bus/screens/home_screen.dart';
 import 'package:wheres_my_bus/utils/constants.dart';
+import 'package:wheres_my_bus/services/bus_sequence_service.dart';
 
 void main() async {
   // Initialize Flutter bindings first
@@ -25,6 +26,9 @@ void main() async {
   
   // Initialize Google Mobile Ads
   await MobileAds.instance.initialize();
+  
+  // Initialize Bus Sequence Service
+  await BusSequenceService.initialize();
   
   runApp(const WheresMyBusApp());
 }

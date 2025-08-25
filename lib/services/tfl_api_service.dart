@@ -17,7 +17,7 @@ class TflApiService {
       );
 
       if (response.statusCode == 200) {
-        return _parseApiResponse(response.body);
+        return _parseApiResponse(response.body, stopCode);
       } else {
         throw Exception('Failed to load bus arrivals: ${response.statusCode}');
       }
@@ -27,7 +27,7 @@ class TflApiService {
   }
 
   // Parse the TfL API response
-  static List<BusArrival> _parseApiResponse(String responseBody) {
+  static List<BusArrival> _parseApiResponse(String responseBody, String stopCode) {
     try {
       // The API returns data in a specific format
       // Remove the first line which contains metadata
@@ -44,7 +44,7 @@ class TflApiService {
           // Format: [1, "Stop Name", "Route", timestamp]
           final data = jsonDecode(line.trim());
           if (data is List && data.length >= 4) {
-            final arrival = BusArrival.fromTflApi(data);
+            final arrival = BusArrival.fromTflApi(data, stopCode);
             if (arrival.timeToStation >= 0) {
               arrivals.add(arrival);
             }

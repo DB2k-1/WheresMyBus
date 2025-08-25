@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:wheres_my_bus/models/bus_arrival.dart';
 import 'package:wheres_my_bus/utils/constants.dart';
+import 'package:wheres_my_bus/services/bus_sequence_service.dart';
 
 class BusArrivalCard extends StatelessWidget {
   final BusArrival arrival;
@@ -21,11 +22,11 @@ class BusArrivalCard extends StatelessWidget {
           children: [
             // Bus route icon
             Container(
-              width: 50,
-              height: 50,
+              width: 45,
+              height: 45,
               decoration: BoxDecoration(
                 color: AppColors.londonRed.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(25),
+                borderRadius: BorderRadius.circular(22.5),
               ),
               child: Center(
                 child: Text(
@@ -33,7 +34,7 @@ class BusArrivalCard extends StatelessWidget {
                   style: TextStyle(
                     color: AppColors.londonRed,
                     fontWeight: FontWeight.bold,
-                    fontSize: 16,
+                    fontSize: 15,
                   ),
                 ),
               ),
@@ -54,7 +55,7 @@ class BusArrivalCard extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: AppSizes.paddingSmall),
-                  if (arrival.destination.isNotEmpty)
+                  if (arrival.destination.isNotEmpty) ...[
                     Text(
                       'To: ${arrival.destination}',
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
@@ -63,6 +64,9 @@ class BusArrivalCard extends StatelessWidget {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
+                    const SizedBox(height: 4),
+                    _buildFinalDestination(context, arrival.lineName, arrival.currentStopCode),
+                  ],
                 ],
               ),
             ),
@@ -96,5 +100,21 @@ class BusArrivalCard extends StatelessWidget {
     if (arrival.timeToStation <= 0) return Colors.green;
     if (arrival.timeToStation < 300) return Colors.orange; // Less than 5 minutes
     return AppColors.londonRed;
+  }
+  
+  Widget _buildFinalDestination(BuildContext context, String route, String currentStopCode) {
+    final finalDestination = BusSequenceService.getFinalDestination(route, currentStopCode);
+    
+    if (finalDestination.isEmpty) return const SizedBox.shrink();
+    
+    return Text(
+      'Final Stop: ${finalDestination.first}',
+      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+        color: AppColors.darkGrey.withValues(alpha: 0.6),
+        fontSize: 12,
+      ),
+      maxLines: 2,
+      overflow: TextOverflow.ellipsis,
+    );
   }
 }
