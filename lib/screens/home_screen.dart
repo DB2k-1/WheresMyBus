@@ -7,6 +7,7 @@ import 'package:wheres_my_bus/widgets/bus_stop_card.dart';
 import 'package:wheres_my_bus/widgets/logo_placeholder.dart';
 import 'package:wheres_my_bus/widgets/banner_ad_placeholder.dart';
 import 'package:wheres_my_bus/widgets/data_status_banner.dart';
+import 'package:wheres_my_bus/widgets/weather_widget.dart';
 
 
 class HomeScreen extends StatefulWidget {
@@ -102,6 +103,9 @@ class _HomeScreenState extends State<HomeScreen> {
                                 ),
                               ),
                             ),
+                            // Weather widget
+                            const WeatherWidget(),
+                            const SizedBox(width: AppSizes.paddingSmall),
                             FloatingActionButton(
                               key: const ValueKey('add_bus_stops_button'),
                               onPressed: _navigateToAddBusStops,
