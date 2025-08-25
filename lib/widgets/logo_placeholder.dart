@@ -2,9 +2,20 @@ import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:wheres_my_bus/utils/constants.dart';
+import 'package:wheres_my_bus/services/data_update_service.dart';
+import 'package:wheres_my_bus/widgets/data_status_banner.dart';
 
-class LogoPlaceholder extends StatelessWidget {
+class LogoPlaceholder extends StatefulWidget {
   const LogoPlaceholder({super.key});
+
+  @override
+  State<LogoPlaceholder> createState() => _LogoPlaceholderState();
+}
+
+class _LogoPlaceholderState extends State<LogoPlaceholder> {
+  int _tapCount = 0;
+  DateTime? _lastTapTime;
+  static const Duration _tapTimeout = Duration(seconds: 3);
 
   /// Get platform-specific share icon
   IconData _getShareIcon() {
@@ -33,6 +44,45 @@ class LogoPlaceholder extends StatelessWidget {
     );
   }
 
+  /// Handle logo taps for manual data refresh
+  void _handleLogoTap() {
+    final now = DateTime.now();
+    
+    // Reset tap count if too much time has passed
+    if (_lastTapTime != null && now.difference(_lastTapTime!) > _tapTimeout) {
+      _tapCount = 0;
+    }
+    
+    _tapCount++;
+    _lastTapTime = now;
+    
+    // Check if we've reached 5 taps
+    if (_tapCount >= 5) {
+      _tapCount = 0; // Reset for next time
+      _forceDataRefresh();
+    }
+  }
+
+  /// Force a manual data refresh
+  Future<void> _forceDataRefresh() async {
+    try {
+      // Show manual update progress in banner
+      DataStatusBanner.showManualUpdate();
+      
+      // Force a data update check
+      await DataUpdateService.forceUpdate();
+      
+      // Refresh the data status banner to show updated status
+      DataStatusBanner.refreshAll();
+      
+      print('DataUpdateService: Manual update completed successfully');
+    } catch (e) {
+      print('DataUpdateService: Manual update failed: $e');
+      // Refresh banner to show current status (which might be outdated)
+      DataStatusBanner.refreshAll();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -58,19 +108,22 @@ class LogoPlaceholder extends StatelessWidget {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Image.asset(
-                      'assets/images/logo.png',
-                      height: 50,
-                      width: 50,
-                      fit: BoxFit.contain,
-                      errorBuilder: (context, error, stackTrace) {
-                        // Fallback to bus icon if logo fails to load
-                        return Icon(
-                          Icons.directions_bus,
-                          color: Colors.white,
-                          size: 50,
-                        );
-                      },
+                    GestureDetector(
+                      onTap: _handleLogoTap,
+                      child: Image.asset(
+                        'assets/images/logo.png',
+                        height: 50,
+                        width: 50,
+                        fit: BoxFit.contain,
+                        errorBuilder: (context, error, stackTrace) {
+                          // Fallback to bus icon if logo fails to load
+                          return Icon(
+                            Icons.directions_bus,
+                            color: Colors.white,
+                            size: 50,
+                          );
+                        },
+                      ),
                     ),
                     const SizedBox(width: AppSizes.paddingMedium),
                     Expanded(

@@ -6,6 +6,7 @@ import 'package:wheres_my_bus/utils/constants.dart';
 import 'package:wheres_my_bus/widgets/bus_stop_card.dart';
 import 'package:wheres_my_bus/widgets/logo_placeholder.dart';
 import 'package:wheres_my_bus/widgets/banner_ad_placeholder.dart';
+import 'package:wheres_my_bus/widgets/data_status_banner.dart';
 
 
 class HomeScreen extends StatefulWidget {
@@ -68,6 +69,9 @@ class _HomeScreenState extends State<HomeScreen> {
         children: [
           // Logo placeholder at top
           const LogoPlaceholder(),
+          
+          // Data status banner
+          const DataStatusBanner(),
           
           // Main content area
           Expanded(

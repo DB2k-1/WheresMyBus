@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/services.dart';
 import 'package:wheres_my_bus/models/bus_stop.dart';
+import 'package:wheres_my_bus/services/data_update_service.dart';
 
 class BusStopService {
   static List<BusStop>? _allBusStops;
@@ -19,7 +20,7 @@ class BusStopService {
 
     _isLoading = true;
     try {
-      final String csvData = await rootBundle.loadString('assets/bus-stops.csv');
+      final String csvData = await DataUpdateService.getBusStopsData();
       final List<String> lines = const LineSplitter().convert(csvData);
       
       // Skip header row and parse each line

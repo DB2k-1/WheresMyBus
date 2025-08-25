@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/services.dart';
+import 'package:wheres_my_bus/services/data_update_service.dart';
 
 class BusSequenceService {
   static List<Map<String, dynamic>>? _sequences;
@@ -8,7 +9,7 @@ class BusSequenceService {
     if (_sequences != null) return;
     
     try {
-      final String data = await rootBundle.loadString('assets/bus-sequences.csv');
+      final String data = await DataUpdateService.getBusSequencesData();
       final List<String> lines = data.split('\n');
       
       // Skip header line
