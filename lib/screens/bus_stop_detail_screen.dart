@@ -1,0 +1,277 @@
+import 'dart:async';
+import 'package:flutter/material.dart';
+import 'package:wheres_my_bus/models/bus_arrival.dart';
+import 'package:wheres_my_bus/services/tfl_api_service.dart';
+import 'package:wheres_my_bus/utils/constants.dart';
+import 'package:wheres_my_bus/widgets/bus_arrival_card.dart';
+
+class BusStopDetailScreen extends StatefulWidget {
+  final dynamic busStop;
+
+  const BusStopDetailScreen({super.key, required this.busStop});
+
+  @override
+  State<BusStopDetailScreen> createState() => _BusStopDetailScreenState();
+}
+
+class _BusStopDetailScreenState extends State<BusStopDetailScreen> {
+  List<BusArrival> _busArrivals = [];
+  bool _isLoading = true;
+  String? _errorMessage;
+  Timer? _refreshTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadBusArrivals();
+    _startAutoRefresh();
+  }
+
+  @override
+  void dispose() {
+    _refreshTimer?.cancel();
+    super.dispose();
+  }
+
+  void _startAutoRefresh() {
+    // Refresh every 30 seconds
+    _refreshTimer = Timer.periodic(const Duration(seconds: 30), (timer) {
+      if (mounted) {
+        _loadBusArrivals();
+      }
+    });
+  }
+
+  Future<void> _loadBusArrivals() async {
+    if (!mounted) return;
+    
+    setState(() => _isLoading = true);
+    
+    try {
+      final arrivals = await TflApiService.getBusArrivals(widget.busStop.busStopCode);
+      if (mounted) {
+        setState(() {
+          _busArrivals = arrivals;
+          _isLoading = false;
+          _errorMessage = null;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _errorMessage = 'Error loading bus arrivals: $e';
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _refreshArrivals() async {
+    await _loadBusArrivals();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: AppColors.cream,
+      appBar: AppBar(
+        title: const Text('Where\'s My Bus?'),
+        backgroundColor: AppColors.londonRed,
+        foregroundColor: Colors.white,
+        actions: [
+          IconButton(
+            onPressed: _refreshArrivals,
+            icon: const Icon(Icons.refresh),
+          ),
+        ],
+      ),
+      body: Column(
+        children: [
+          // Bus stop info header
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(AppSizes.paddingLarge),
+            margin: const EdgeInsets.all(AppSizes.paddingMedium),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(AppSizes.borderRadius),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.1),
+                  blurRadius: 4,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(
+                      Icons.directions_bus,
+                      color: AppColors.londonRed,
+                      size: 24,
+                    ),
+                    const SizedBox(width: AppSizes.paddingSmall),
+                    Expanded(
+                      child: Text(
+                        widget.busStop.stopName,
+                        style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                          color: AppColors.darkGrey,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: AppSizes.paddingSmall),
+                Row(
+                  children: [
+                    Text(
+                      'Stop Code: ${widget.busStop.busStopCode}',
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: AppColors.darkGrey.withOpacity(0.7),
+                      ),
+                    ),
+                    const SizedBox(width: AppSizes.paddingMedium),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: AppSizes.paddingSmall,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppColors.londonRed.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(6),
+                        border: Border.all(
+                          color: AppColors.londonRed.withValues(alpha: 0.3),
+                          width: 1,
+                        ),
+                      ),
+                      child: Text(
+                        widget.busStop.userFriendlyDirection,
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: AppColors.londonRed,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                if (widget.busStop.distance != null) ...[
+                  const SizedBox(height: AppSizes.paddingSmall),
+                  Text(
+                    'Distance: ${(widget.busStop.distance! * 0.000621371).toStringAsFixed(1)} miles',
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: AppColors.darkGrey.withOpacity(0.7),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+
+          // Bus arrivals section
+          Expanded(
+            child: Container(
+              margin: const EdgeInsets.symmetric(horizontal: AppSizes.paddingMedium),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.all(AppSizes.paddingMedium),
+                    child: Text(
+                      'Bus Arrivals',
+                      style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                        color: AppColors.darkGrey,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                  
+                  // Error message
+                  if (_errorMessage != null)
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(AppSizes.paddingMedium),
+                      margin: const EdgeInsets.only(bottom: AppSizes.paddingMedium),
+                      decoration: BoxDecoration(
+                        color: Colors.red.shade100,
+                        borderRadius: BorderRadius.circular(AppSizes.borderRadius),
+                        border: Border.all(color: Colors.red),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.error, color: Colors.red),
+                          const SizedBox(width: AppSizes.paddingSmall),
+                          Expanded(
+                            child: Text(
+                              _errorMessage!,
+                              style: const TextStyle(color: Colors.red),
+                            ),
+                          ),
+                          TextButton(
+                            onPressed: _refreshArrivals,
+                            child: const Text('Retry'),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                  // Bus arrivals list
+                  Expanded(
+                    child: _isLoading
+                        ? const Center(child: CircularProgressIndicator())
+                        : _busArrivals.isEmpty
+                            ? _buildEmptyState()
+                            : _buildBusArrivalsList(),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEmptyState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.directions_bus_outlined,
+            size: 80,
+            color: AppColors.londonRed.withOpacity(0.5),
+          ),
+          const SizedBox(height: AppSizes.paddingLarge),
+          Text(
+            AppStrings.noBuses,
+            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+              color: AppColors.darkGrey,
+            ),
+          ),
+          const SizedBox(height: AppSizes.paddingMedium),
+          Text(
+            'No buses are currently scheduled to arrive at this stop',
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              color: AppColors.darkGrey.withOpacity(0.7),
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBusArrivalsList() {
+    return ListView.builder(
+      itemCount: _busArrivals.length,
+      itemBuilder: (context, index) {
+        final arrival = _busArrivals[index];
+        return BusArrivalCard(arrival: arrival);
+      },
+    );
+  }
+}

@@ -1,0 +1,69 @@
+Privacy Policy
+
+Last updated: January 2025
+
+Introduction
+
+Welcome to WheresMyBus. This Privacy Policy explains how we handle information when you use our mobile application.
+
+Information We Don't Collect
+
+We do not collect any personal information from our users. Our app does not require user registration or any personal data input.
+
+Location Services
+
+Our app requires access to your device's location to provide its core functionality of finding nearby bus stops. This location data is:
+
+- Used locally on your device to calculate distances to bus stops
+- Not transmitted to our servers or stored anywhere
+- Not shared with third parties
+- Only used when you actively request to find nearby bus stops
+
+The location permission is essential for the app to work properly, as it needs to convert your GPS coordinates to UK grid references to match the bus stop database format.
+
+Third-Party Advertising
+
+Our app uses Google AdMob to display advertisements. Google AdMob may collect and process data according to their own privacy policy. This may include:
+
+- Device information (such as device type, operating system)
+- IP address
+- Advertising identifiers
+- Non-personal information about your app usage
+
+Google AdMob
+
+Google AdMob is a mobile advertising platform provided by Google. When you use our app, Google AdMob may collect and process data according to their privacy policy. You can learn more about how Google uses data when you use our app by visiting: https://policies.google.com/privacy
+
+Local Data Storage
+
+The app stores your selected bus stops locally on your device using your device's local storage. This data:
+- Remains on your device only
+- Is not transmitted to our servers
+- Is not shared with third parties
+- Can be cleared by uninstalling the app
+
+Your Rights
+
+Under the UK Data Protection Act and GDPR, you have certain rights regarding your personal data. Since we don't collect personal data, these rights don't apply to our app's direct data collection. However, you can:
+
+- Opt out of personalised ads through your device settings
+- Contact Google directly regarding any data collected through AdMob
+- Control location permissions through your device settings
+- Clear local app data by uninstalling the app
+
+Changes to This Privacy Policy
+
+We may update our Privacy Policy from time to time. We will notify you of any changes by posting the new Privacy Policy on this page and updating the "Last updated" date.
+
+Contact Us
+
+If you have any questions about this Privacy Policy, please contact us at beamer.apps.ads@gmail.com
+
+Compliance
+
+This Privacy Policy is designed to comply with:
+
+- UK Data Protection Act
+- General Data Protection Regulation (GDPR)
+- Google AdMob's requirements
+- Location services best practices

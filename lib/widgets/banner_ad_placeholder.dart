@@ -1,0 +1,104 @@
+import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
+import 'package:google_mobile_ads/google_mobile_ads.dart';
+import 'package:wheres_my_bus/utils/constants.dart';
+
+class BannerAdPlaceholder extends StatefulWidget {
+  const BannerAdPlaceholder({super.key});
+
+  @override
+  State<BannerAdPlaceholder> createState() => _BannerAdPlaceholderState();
+}
+
+class _BannerAdPlaceholderState extends State<BannerAdPlaceholder> {
+  BannerAd? _bannerAd;
+  bool _isLoaded = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadBannerAd();
+  }
+
+  void _loadBannerAd() {
+    _bannerAd = BannerAd(
+      adUnitId: _getAdUnitId(),
+      size: AdSize.banner,
+      request: const AdRequest(),
+      listener: BannerAdListener(
+        onAdLoaded: (ad) {
+          setState(() {
+            _isLoaded = true;
+          });
+        },
+        onAdFailedToLoad: (ad, error) {
+          ad.dispose();
+        },
+      ),
+    );
+
+    _bannerAd!.load();
+  }
+
+  String _getAdUnitId() {
+    // Use test ad unit IDs for development
+    if (defaultTargetPlatform == TargetPlatform.iOS) {
+      return 'ca-app-pub-3940256099942544/2934735716'; // iOS test ad unit ID
+    } else {
+      return 'ca-app-pub-3940256099942544/6300978111'; // Android test ad unit ID
+    }
+  }
+
+  @override
+  void dispose() {
+    _bannerAd?.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_isLoaded && _bannerAd != null) {
+      return Container(
+        width: double.infinity,
+        height: AppSizes.bannerHeight,
+        child: AdWidget(ad: _bannerAd!),
+      );
+    }
+
+    // Fallback placeholder while ad loads or if it fails
+    return Container(
+      width: double.infinity,
+      height: AppSizes.bannerHeight,
+      decoration: BoxDecoration(
+        color: AppColors.lightGrey,
+        border: Border(
+          top: BorderSide(
+            color: AppColors.darkGrey.withValues(alpha: 0.2),
+            width: 1,
+          ),
+        ),
+      ),
+      child: Center(
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.ads_click,
+              color: AppColors.darkGrey.withValues(alpha: 0.5),
+              size: 20,
+            ),
+            Text(
+              ' Banner Advertisement',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: AppColors.darkGrey.withValues(alpha: 0.5),
+                fontStyle: FontStyle.italic,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
