@@ -28,13 +28,13 @@ class _LogoPlaceholderState extends State<LogoPlaceholder> {
 
   /// Handle app sharing with native share functionality
   Future<void> _shareApp() async {
-    String appStoreUrl = 'https://apps.apple.com/us/app/wheres-my-bus/id6751463363';
-    
     String shareMessage;
     if (defaultTargetPlatform == TargetPlatform.iOS) {
+      String appStoreUrl = 'https://apps.apple.com/us/app/wheres-my-bus/id6751463363';
       shareMessage = 'Get Where\'s My Bus? from the Apple App Store: $appStoreUrl';
     } else {
-      shareMessage = 'Get Where\'s My Bus? from the Google Play Store: $appStoreUrl';
+      String playStoreUrl = 'https://play.google.com/store/apps/details?id=co.uk.vidbeamish.wheresmybus';
+      shareMessage = 'Get Where\'s My Bus? from the Google Play Store: $playStoreUrl';
     }
     
     // Use native share functionality
