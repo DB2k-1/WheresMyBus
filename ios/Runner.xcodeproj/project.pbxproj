@@ -459,7 +459,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 0.02.0;
+				MARKETING_VERSION = 1.01.0;
 				PRODUCT_BUNDLE_IDENTIFIER = co.uk.vidbeamish.wheresmybus;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
@@ -653,7 +653,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 0.02.0;
+				MARKETING_VERSION = 1.01.0;
 				PRODUCT_BUNDLE_IDENTIFIER = co.uk.vidbeamish.wheresmybus;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
@@ -684,7 +684,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 0.02.0;
+				MARKETING_VERSION = 1.01.0;
 				PRODUCT_BUNDLE_IDENTIFIER = co.uk.vidbeamish.wheresmybus;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
