@@ -41,11 +41,21 @@ class _BannerAdPlaceholderState extends State<BannerAdPlaceholder> {
   }
 
   String _getAdUnitId() {
-    // Use test ad unit IDs for development
-    if (defaultTargetPlatform == TargetPlatform.iOS) {
-      return 'ca-app-pub-3940256099942544/2934735716'; // iOS test ad unit ID
+    // Use production ad unit IDs in release mode, test ad unit IDs in debug mode
+    if (kDebugMode) {
+      // Test ad unit IDs for development
+      if (defaultTargetPlatform == TargetPlatform.iOS) {
+        return 'ca-app-pub-3940256099942544/2934735716'; // iOS test ad unit ID
+      } else {
+        return 'ca-app-pub-3940256099942544/6300978111'; // Android test ad unit ID
+      }
     } else {
-      return 'ca-app-pub-3940256099942544/6300978111'; // Android test ad unit ID
+      // Production ad unit IDs for release
+      if (defaultTargetPlatform == TargetPlatform.iOS) {
+        return 'ca-app-pub-9701853219520589/6701573822'; // iOS production banner ad unit ID
+      } else {
+        return 'ca-app-pub-9701853219520589/8944593785'; // Android production banner ad unit ID
+      }
     }
   }
 
