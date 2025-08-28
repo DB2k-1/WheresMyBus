@@ -21,37 +21,23 @@ class _BannerAdPlaceholderState extends State<BannerAdPlaceholder> {
   }
 
   void _loadBannerAd() {
-    final adUnitId = _getAdUnitId();
-    print('BannerAd: Loading ad with unit ID: $adUnitId');
-    print('BannerAd: Debug mode: $kDebugMode');
-    print('BannerAd: Target platform: $defaultTargetPlatform');
-    
     _bannerAd = BannerAd(
-      adUnitId: adUnitId,
+      adUnitId: _getAdUnitId(),
       size: AdSize.banner,
       request: const AdRequest(),
       listener: BannerAdListener(
         onAdLoaded: (ad) {
-          print('BannerAd: Ad loaded successfully');
           setState(() {
             _isLoaded = true;
           });
         },
         onAdFailedToLoad: (ad, error) {
-          print('BannerAd: Ad failed to load: ${error.message}');
-          print('BannerAd: Error code: ${error.code}');
-          print('BannerAd: Error domain: ${error.domain}');
           ad.dispose();
         },
       ),
     );
 
-    try {
-      _bannerAd!.load();
-      print('BannerAd: Ad load request sent');
-    } catch (e) {
-      print('BannerAd: Exception during ad load: $e');
-    }
+    _bannerAd!.load();
   }
 
   String _getAdUnitId() {
