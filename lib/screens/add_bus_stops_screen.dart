@@ -71,8 +71,8 @@ class _AddBusStopsScreenState extends State<AddBusStopsScreen> {
         setState(() => _hasLocationPermission = true);
       }
 
-      // Get more bus stops to ensure we always have 6 available
-      final nearestStops = await LocationService.getNearestBusStops(20);
+      // Get more bus stops to ensure we always have 10 available
+      final nearestStops = await LocationService.getNearestBusStops(30);
       
       // Filter out bus stops that are already in user's list
       final userBusStops = await StorageService.loadBusStopCodes();
@@ -82,8 +82,8 @@ class _AddBusStopsScreenState extends State<AddBusStopsScreen> {
         !userStopCodes.contains(stop.naptanAtco)
       ).cast<BusStop>().toList();
       
-      // Take the first 6 available stops
-      final displayStops = availableStops.take(6).toList();
+      // Take the first 10 available stops
+      final displayStops = availableStops.take(10).toList();
       
       setState(() {
         _nearbyBusStops = displayStops;
@@ -99,8 +99,8 @@ class _AddBusStopsScreenState extends State<AddBusStopsScreen> {
 
   Future<void> _findMoreBusStops() async {
     try {
-      // Get more bus stops to fill up to 6
-      final nearestStops = await LocationService.getNearestBusStops(30);
+      // Get more bus stops to fill up to 10
+      final nearestStops = await LocationService.getNearestBusStops(40);
       
       // Filter out bus stops that are already in user's list
       final userBusStops = await StorageService.loadBusStopCodes();
@@ -111,8 +111,8 @@ class _AddBusStopsScreenState extends State<AddBusStopsScreen> {
         !_nearbyBusStops.any((existing) => existing.naptanAtco == stop.naptanAtco)
       ).cast<BusStop>().toList();
       
-      // Add new stops to fill up to 6
-      final neededStops = 6 - _nearbyBusStops.length;
+      // Add new stops to fill up to 10
+      final neededStops = 10 - _nearbyBusStops.length;
       final newStops = availableStops.take(neededStops).toList();
       
       setState(() {
@@ -132,8 +132,8 @@ class _AddBusStopsScreenState extends State<AddBusStopsScreen> {
         _nearbyBusStops.removeWhere((stop) => stop.naptanAtco == busStop.naptanAtco);
       });
       
-      // If we have fewer than 6 stops, try to fetch more
-      if (_nearbyBusStops.length < 6) {
+      // If we have fewer than 10 stops, try to fetch more
+      if (_nearbyBusStops.length < 10) {
         _findMoreBusStops();
       }
       
