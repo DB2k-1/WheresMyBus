@@ -53,13 +53,15 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  void _navigateToBusStopDetail(dynamic busStop) {
-    Navigator.push(
+  void _navigateToBusStopDetail(dynamic busStop) async {
+    await Navigator.push(
       context,
       MaterialPageRoute(
         builder: (context) => BusStopDetailScreen(busStop: busStop),
       ),
     );
+    // Force a rebuild to refresh custom directions
+    setState(() {});
   }
 
   @override

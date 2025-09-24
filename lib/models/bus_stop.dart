@@ -1,5 +1,6 @@
 import 'dart:math';
 import 'package:wheres_my_bus/utils/direction_helper.dart';
+import 'package:wheres_my_bus/services/custom_direction_service.dart';
 
 class BusStop {
   final String stopCodeLbsl;
@@ -69,6 +70,12 @@ class BusStop {
   
   /// Get direction badge text
   String get directionBadge => DirectionHelper.getDirectionBadge(heading.toDouble());
+
+  /// Get display direction (custom if available, otherwise original)
+  Future<String> getDisplayDirection() async {
+    final customDirection = await CustomDirectionService.getCustomDirection(naptanAtco);
+    return customDirection ?? userFriendlyDirection;
+  }
 
   @override
   String toString() {

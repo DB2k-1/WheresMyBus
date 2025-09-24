@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:wheres_my_bus/utils/constants.dart';
+import 'package:wheres_my_bus/services/custom_direction_service.dart';
 
-class BusStopCard extends StatelessWidget {
+class BusStopCard extends StatefulWidget {
   final dynamic busStop;
   final VoidCallback? onTap;
   final VoidCallback? onRemove;
@@ -18,6 +19,45 @@ class BusStopCard extends StatelessWidget {
   });
 
   @override
+  State<BusStopCard> createState() => _BusStopCardState();
+}
+
+class _BusStopCardState extends State<BusStopCard> {
+  String _displayDirection = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadDisplayDirection();
+  }
+
+  @override
+  void didUpdateWidget(BusStopCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Reload direction when widget updates (e.g., when returning from edit)
+    if (oldWidget.busStop.naptanAtco != widget.busStop.naptanAtco) {
+      _loadDisplayDirection();
+    } else {
+      // Even if it's the same bus stop, reload to check for custom direction changes
+      _loadDisplayDirection();
+    }
+  }
+
+  Future<void> _loadDisplayDirection() async {
+    final customDirection = await CustomDirectionService.getCustomDirection(widget.busStop.naptanAtco);
+    if (mounted) {
+      setState(() {
+        _displayDirection = customDirection ?? widget.busStop.userFriendlyDirection;
+      });
+    }
+  }
+
+  /// Refresh the display direction - can be called externally
+  Future<void> refreshDirection() async {
+    await _loadDisplayDirection();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Card(
       margin: const EdgeInsets.only(bottom: AppSizes.paddingMedium),
@@ -26,7 +66,7 @@ class BusStopCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(AppSizes.borderRadius),
       ),
       child: InkWell(
-        onTap: onTap,
+        onTap: widget.onTap,
         borderRadius: BorderRadius.circular(AppSizes.borderRadius),
         child: Padding(
           padding: const EdgeInsets.all(AppSizes.paddingMedium),
@@ -60,7 +100,7 @@ class BusStopCard extends StatelessWidget {
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Text(
-                            busStop.stopName,
+                            widget.busStop.stopName,
                             style: Theme.of(context).textTheme.titleMedium?.copyWith(
                               color: AppColors.darkGrey,
                               fontWeight: FontWeight.bold,
@@ -72,7 +112,7 @@ class BusStopCard extends StatelessWidget {
                           Row(
                             children: [
                               Text(
-                                'Code: ${busStop.busStopCode}',
+                                'Code: ${widget.busStop.busStopCode}',
                                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                                   color: AppColors.darkGrey.withValues(alpha: 0.7),
                                 ),
@@ -92,7 +132,9 @@ class BusStopCard extends StatelessWidget {
                                   ),
                                 ),
                                 child: Text(
-                                  busStop.userFriendlyDirection,
+                                  _displayDirection.isEmpty 
+                                      ? widget.busStop.userFriendlyDirection 
+                                      : _displayDirection,
                                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                                     color: AppColors.londonRed,
                                     fontWeight: FontWeight.w600,
@@ -102,10 +144,10 @@ class BusStopCard extends StatelessWidget {
                               ),
                             ],
                           ),
-                          if (busStop.distance != null) ...[
+                          if (widget.busStop.distance != null) ...[
                             const SizedBox(height: 16),
                             Text(
-                              '${(busStop.distance! * 0.000621371).toStringAsFixed(1)} miles away',
+                              '${(widget.busStop.distance! * 0.000621371).toStringAsFixed(1)} miles away',
                               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                                 color: AppColors.londonRed,
                                 fontWeight: FontWeight.w500,
@@ -115,9 +157,9 @@ class BusStopCard extends StatelessWidget {
                         ],
                       ),
                     ),
-                    if (showAddButton && onAdd != null)
+                    if (widget.showAddButton && widget.onAdd != null)
                       GestureDetector(
-                        onTap: onAdd,
+                        onTap: widget.onAdd,
                         child: SizedBox(
                           width: 32,
                           height: 32,

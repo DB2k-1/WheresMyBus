@@ -2,9 +2,11 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:wheres_my_bus/models/bus_arrival.dart';
 import 'package:wheres_my_bus/services/tfl_api_service.dart';
+import 'package:wheres_my_bus/services/custom_direction_service.dart';
 import 'package:wheres_my_bus/utils/constants.dart';
 import 'package:wheres_my_bus/widgets/bus_arrival_card.dart';
 import 'package:wheres_my_bus/widgets/banner_ad_placeholder.dart';
+import 'package:wheres_my_bus/widgets/edit_direction_dialog.dart';
 
 class BusStopDetailScreen extends StatefulWidget {
   final dynamic busStop;
@@ -20,12 +22,21 @@ class _BusStopDetailScreenState extends State<BusStopDetailScreen> {
   bool _isLoading = true;
   String? _errorMessage;
   Timer? _refreshTimer;
+  String _displayDirection = '';
 
   @override
   void initState() {
     super.initState();
+    _loadDisplayDirection();
     _loadBusArrivals();
     _startAutoRefresh();
+  }
+
+  Future<void> _loadDisplayDirection() async {
+    final customDirection = await CustomDirectionService.getCustomDirection(widget.busStop.naptanAtco);
+    setState(() {
+      _displayDirection = customDirection ?? widget.busStop.userFriendlyDirection;
+    });
   }
 
   @override
@@ -69,6 +80,23 @@ class _BusStopDetailScreenState extends State<BusStopDetailScreen> {
 
   Future<void> _refreshArrivals() async {
     await _loadBusArrivals();
+  }
+
+  Future<void> _editDirection() async {
+    final result = await showDialog<String>(
+      context: context,
+      builder: (context) => EditDirectionDialog(
+        naptanAtco: widget.busStop.naptanAtco,
+        currentDirection: _displayDirection,
+        originalDirection: widget.busStop.userFriendlyDirection,
+      ),
+    );
+
+    if (result != null) {
+      setState(() {
+        _displayDirection = result;
+      });
+    }
   }
 
   @override
@@ -138,7 +166,7 @@ class _BusStopDetailScreenState extends State<BusStopDetailScreen> {
                             Text(
                               'Stop Code: ${widget.busStop.busStopCode}',
                               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                color: AppColors.darkGrey.withOpacity(0.7),
+                                color: AppColors.darkGrey.withValues(alpha: 0.7),
                               ),
                             ),
                             const SizedBox(width: AppSizes.paddingMedium),
@@ -155,12 +183,28 @@ class _BusStopDetailScreenState extends State<BusStopDetailScreen> {
                                   width: 1,
                                 ),
                               ),
-                              child: Text(
-                                widget.busStop.userFriendlyDirection,
-                                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                  color: AppColors.londonRed,
-                                  fontWeight: FontWeight.w600,
-                                ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(
+                                    _displayDirection.isEmpty 
+                                        ? widget.busStop.userFriendlyDirection 
+                                        : _displayDirection,
+                                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                      color: AppColors.londonRed,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 4),
+                                  GestureDetector(
+                                    onTap: _editDirection,
+                                    child: Icon(
+                                      Icons.edit,
+                                      size: 14,
+                                      color: AppColors.londonRed.withValues(alpha: 0.7),
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
                           ],
