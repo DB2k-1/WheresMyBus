@@ -170,41 +170,41 @@ class _BusStopDetailScreenState extends State<BusStopDetailScreen> {
                               ),
                             ),
                             const SizedBox(width: AppSizes.paddingMedium),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: AppSizes.paddingSmall,
-                                vertical: 4,
-                              ),
-                              decoration: BoxDecoration(
-                                color: AppColors.londonRed.withValues(alpha: 0.1),
-                                borderRadius: BorderRadius.circular(6),
-                                border: Border.all(
-                                  color: AppColors.londonRed.withValues(alpha: 0.3),
-                                  width: 1,
+                            GestureDetector(
+                              onTap: _editDirection,
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: AppSizes.paddingSmall,
+                                  vertical: 4,
                                 ),
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Text(
-                                    _displayDirection.isEmpty 
-                                        ? widget.busStop.userFriendlyDirection 
-                                        : _displayDirection,
-                                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                      color: AppColors.londonRed,
-                                      fontWeight: FontWeight.w600,
-                                    ),
+                                decoration: BoxDecoration(
+                                  color: AppColors.londonRed.withValues(alpha: 0.1),
+                                  borderRadius: BorderRadius.circular(6),
+                                  border: Border.all(
+                                    color: AppColors.londonRed.withValues(alpha: 0.3),
+                                    width: 1,
                                   ),
-                                  const SizedBox(width: 4),
-                                  GestureDetector(
-                                    onTap: _editDirection,
-                                    child: Icon(
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Text(
+                                      _displayDirection.isEmpty 
+                                          ? widget.busStop.userFriendlyDirection 
+                                          : _displayDirection,
+                                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                        color: AppColors.londonRed,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 4),
+                                    Icon(
                                       Icons.edit,
                                       size: 14,
                                       color: AppColors.londonRed.withValues(alpha: 0.7),
                                     ),
-                                  ),
-                                ],
+                                  ],
+                                ),
                               ),
                             ),
                           ],
