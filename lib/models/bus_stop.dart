@@ -54,15 +54,15 @@ class BusStop {
     try {
       final LatLongConverter converter = LatLongConverter();
       
-      // Create OSRef from easting and northing
-      final OSRef osRef = OSRef(locationEasting, locationNorthing);
-      
-      // Convert to lat/lng (this handles OSGB36 to WGS84 conversion)
-      final LatLng latLng = converter.getLatLong(osRef);
+      // Convert easting/northing to lat/lng (handles OSGB36 to WGS84 conversion)
+      final LatLong latLong = converter.getLatLongFromOSGB(
+        locationEasting.round(), 
+        locationNorthing.round()
+      );
       
       return {
-        'latitude': latLng.latitude,
-        'longitude': latLng.longitude,
+        'latitude': latLong.lat,
+        'longitude': latLong.long,
       };
     } catch (e) {
       // Fallback to approximate conversion if package fails
