@@ -5,6 +5,7 @@ class AppColors {
   static const Color londonRed = Color(0xFFDC352D); // Exact red from logo background
   static const Color londonRedLight = Color(0xFFE74C3C);
   static const Color londonRedDark = Color(0xFFB71C1C);
+  static const Color londonBlue = Color(0xFF0019A8); // TfL blue for cycling
   static const Color cream = Color(0xFFFFF8DC);
   static const Color darkGrey = Color(0xFF2C3E50);
   static const Color lightGrey = Color(0xFFECF0F1);

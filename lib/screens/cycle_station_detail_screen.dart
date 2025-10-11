@@ -203,24 +203,15 @@ class CycleStationDetailScreen extends StatelessWidget {
                   
                   _buildStatusRow(
                     context,
-                    label: 'Installed',
-                    isActive: station.installed,
+                    label: 'Operational',
+                    isActive: !station.locked,
                   ),
                   
                   const SizedBox(height: AppSizes.paddingSmall),
                   
                   _buildStatusRow(
                     context,
-                    label: 'Locked',
-                    isActive: station.locked,
-                    isNegative: true,
-                  ),
-                  
-                  const SizedBox(height: AppSizes.paddingSmall),
-                  
-                  _buildStatusRow(
-                    context,
-                    label: 'Temporary',
+                    label: 'Temporary Pop-up',
                     isActive: station.temporary,
                     isNegative: true,
                   ),

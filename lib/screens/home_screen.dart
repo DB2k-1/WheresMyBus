@@ -76,10 +76,12 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                         Tab(
                           icon: Icon(Icons.directions_bus),
                           text: 'TfL Buses',
+                          iconMargin: EdgeInsets.only(bottom: 4),
                         ),
                         Tab(
                           icon: Icon(Icons.pedal_bike),
                           text: 'Santander Cycles',
+                          iconMargin: EdgeInsets.only(bottom: 4),
                         ),
                       ],
                     ),

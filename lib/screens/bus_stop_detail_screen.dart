@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:wheres_my_bus/models/bus_arrival.dart';
 import 'package:wheres_my_bus/services/tfl_api_service.dart';
 import 'package:wheres_my_bus/services/custom_direction_service.dart';
@@ -96,6 +97,42 @@ class _BusStopDetailScreenState extends State<BusStopDetailScreen> {
       setState(() {
         _displayDirection = result;
       });
+    }
+  }
+
+  Future<void> _openInMaps() async {
+    // Convert UK grid coordinates to approximate lat/lng for the bus stop
+    final latLng = widget.busStop.getLatLng();
+    final lat = latLng['latitude'];
+    final lng = latLng['longitude'];
+    
+    // Create Google Maps URL with directions
+    final url = Uri.parse(
+      'https://www.google.com/maps/dir/?api=1&destination=$lat,$lng'
+    );
+
+    try {
+      if (await canLaunchUrl(url)) {
+        await launchUrl(url, mode: LaunchMode.externalApplication);
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Could not open maps'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error opening maps: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 
@@ -208,6 +245,28 @@ class _BusStopDetailScreenState extends State<BusStopDetailScreen> {
                               ),
                             ),
                           ],
+                        ),
+                        const SizedBox(height: AppSizes.paddingSmall),
+                        GestureDetector(
+                          onTap: _openInMaps,
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.map,
+                                size: 16,
+                                color: AppColors.londonBlue,
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                'Open in Google Maps',
+                                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                  color: AppColors.londonBlue,
+                                  decoration: TextDecoration.underline,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                         if (widget.busStop.distance != null) ...[
                           const SizedBox(height: AppSizes.paddingSmall),

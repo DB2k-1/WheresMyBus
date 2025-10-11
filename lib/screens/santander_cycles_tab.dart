@@ -154,29 +154,15 @@ class _SantanderCyclesTabState extends State<SantanderCyclesTab> {
       color: AppColors.londonRed,
       child: Column(
         children: [
-          // Header with + button
+          // Header
           Container(
             padding: const EdgeInsets.all(AppSizes.paddingLarge),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    'Santander Cycles',
-                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                      color: AppColors.darkGrey,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-                FloatingActionButton(
-                  onPressed: _navigateToAddStations,
-                  backgroundColor: AppColors.londonRed,
-                  foregroundColor: Colors.white,
-                  elevation: 8,
-                  mini: true,
-                  child: const Icon(Icons.add, size: 20),
-                ),
-              ],
+            child: Text(
+              'Santander Cycles',
+              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                color: AppColors.darkGrey,
+                fontWeight: FontWeight.bold,
+              ),
             ),
           ),
 
@@ -228,27 +214,11 @@ class _SantanderCyclesTabState extends State<SantanderCyclesTab> {
                     ),
                   ),
                   const SizedBox(height: AppSizes.paddingSmall),
-                  ..._savedStations.map((station) => Dismissible(
-                    key: ValueKey(station.id),
-                    direction: DismissDirection.endToStart,
-                    onDismissed: (_) => _removeSavedStation(station),
-                    background: Container(
-                      alignment: Alignment.centerRight,
-                      padding: const EdgeInsets.only(right: AppSizes.paddingLarge),
-                      decoration: BoxDecoration(
-                        color: Colors.red,
-                        borderRadius: BorderRadius.circular(AppSizes.borderRadius),
-                      ),
-                      child: const Icon(
-                        Icons.delete,
-                        color: Colors.white,
-                        size: 30,
-                      ),
-                    ),
-                    child: CycleStationCard(
-                      station: station,
-                      onTap: () => _navigateToStationDetail(station),
-                    ),
+                  ..._savedStations.map((station) => CycleStationCard(
+                    station: station,
+                    onTap: () => _navigateToStationDetail(station),
+                    onAddRemove: () => _removeSavedStation(station),
+                    isSaved: true,
                   )),
                   const SizedBox(height: AppSizes.paddingMedium),
                   const Divider(thickness: 2),
@@ -287,10 +257,29 @@ class _SantanderCyclesTabState extends State<SantanderCyclesTab> {
                     ),
                   )
                 else
-                  ..._nearestStations.map((station) => CycleStationCard(
-                    station: station,
-                    onTap: () => _navigateToStationDetail(station),
-                  )),
+                  ..._nearestStations.where((station) {
+                    // Filter out stations that are already saved
+                    return !_savedStations.any((s) => s.id == station.id);
+                  }).map((station) {
+                    return CycleStationCard(
+                      station: station,
+                      onTap: () => _navigateToStationDetail(station),
+                      onAddRemove: () async {
+                        await CycleStorageService.addStation(station);
+                        await _loadSavedStations();
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('Added ${station.name}'),
+                              backgroundColor: Colors.green,
+                              duration: const Duration(seconds: 2),
+                            ),
+                          );
+                        }
+                      },
+                      isSaved: false,
+                    );
+                  }),
 
                 const SizedBox(height: AppSizes.paddingLarge),
               ],

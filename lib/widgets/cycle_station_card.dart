@@ -5,11 +5,15 @@ import 'package:wheres_my_bus/utils/constants.dart';
 class CycleStationCard extends StatelessWidget {
   final CycleHireStation station;
   final VoidCallback? onTap;
+  final VoidCallback? onAddRemove;
+  final bool isSaved;
 
   const CycleStationCard({
     super.key,
     required this.station,
     this.onTap,
+    this.onAddRemove,
+    this.isSaved = false,
   });
 
   @override
@@ -28,7 +32,7 @@ class CycleStationCard extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Station name and distance
+              // Station name with +/- button
               Row(
                 children: [
                   Expanded(
@@ -40,35 +44,28 @@ class CycleStationCard extends StatelessWidget {
                       ),
                     ),
                   ),
-                  if (station.distance != null)
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 4,
+                  if (onAddRemove != null)
+                    IconButton(
+                      icon: Icon(
+                        isSaved ? Icons.remove_circle : Icons.add_circle,
+                        color: isSaved ? Colors.red : Colors.green,
+                        size: 28,
                       ),
-                      decoration: BoxDecoration(
-                        color: AppColors.londonBlue.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Text(
-                        station.formattedDistance,
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: AppColors.londonBlue,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
+                      onPressed: onAddRemove,
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
                     ),
                 ],
               ),
               
               const SizedBox(height: AppSizes.paddingMedium),
               
-              // Availability info
+              // Availability info with distance
               Row(
                 children: [
                   // Bikes available
                   Expanded(
-                    child: _buildInfoChip(
+                    child: _buildCompactInfoChip(
                       context,
                       icon: Icons.pedal_bike,
                       label: 'Bikes',
@@ -80,7 +77,7 @@ class CycleStationCard extends StatelessWidget {
                   
                   // Empty docks
                   Expanded(
-                    child: _buildInfoChip(
+                    child: _buildCompactInfoChip(
                       context,
                       icon: Icons.storage,
                       label: 'Docks',
@@ -88,6 +85,20 @@ class CycleStationCard extends StatelessWidget {
                       color: station.nbEmptyDocks > 0 ? Colors.green : Colors.red,
                     ),
                   ),
+                  
+                  const SizedBox(width: AppSizes.paddingSmall),
+                  
+                  // Distance
+                  if (station.distance != null)
+                    Expanded(
+                      child: _buildCompactInfoChip(
+                        context,
+                        icon: Icons.location_on,
+                        label: 'Distance',
+                        value: station.formattedDistance,
+                        color: AppColors.londonBlue,
+                      ),
+                    ),
                 ],
               ),
 
@@ -132,7 +143,7 @@ class CycleStationCard extends StatelessWidget {
     );
   }
 
-  Widget _buildInfoChip(
+  Widget _buildCompactInfoChip(
     BuildContext context, {
     required IconData icon,
     required String label,
@@ -140,38 +151,34 @@ class CycleStationCard extends StatelessWidget {
     required Color color,
   }) {
     return Container(
-      padding: const EdgeInsets.all(8),
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(6),
       ),
-      child: Row(
+      child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           Icon(
             icon,
             color: color,
-            size: 20,
+            size: 18,
           ),
-          const SizedBox(width: 4),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                label,
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: AppColors.darkGrey.withValues(alpha: 0.7),
-                  fontSize: 10,
-                ),
-              ),
-              Text(
-                value,
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  color: color,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ],
+          const SizedBox(height: 2),
+          Text(
+            value,
+            style: Theme.of(context).textTheme.titleSmall?.copyWith(
+              color: color,
+              fontWeight: FontWeight.bold,
+              fontSize: 14,
+            ),
+          ),
+          Text(
+            label,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              color: AppColors.darkGrey.withValues(alpha: 0.7),
+              fontSize: 9,
+            ),
           ),
         ],
       ),
