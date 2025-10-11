@@ -48,6 +48,9 @@ dependencies:
   # Local storage for user's bus stops
   shared_preferences: ^2.2.2
   
+  # Coordinate conversion for UK grid system
+  latlong_to_osgrid: ^1.0.0
+  
   # File system access for data updates
   path_provider: ^2.1.2
   
