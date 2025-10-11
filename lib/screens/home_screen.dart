@@ -1,14 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:wheres_my_bus/screens/add_bus_stops_screen.dart';
-import 'package:wheres_my_bus/screens/bus_stop_detail_screen.dart';
-import 'package:wheres_my_bus/services/storage_service.dart';
+import 'package:wheres_my_bus/screens/tfl_buses_tab.dart';
+import 'package:wheres_my_bus/screens/santander_cycles_tab.dart';
 import 'package:wheres_my_bus/utils/constants.dart';
-import 'package:wheres_my_bus/widgets/bus_stop_card.dart';
 import 'package:wheres_my_bus/widgets/logo_placeholder.dart';
 import 'package:wheres_my_bus/widgets/banner_ad_placeholder.dart';
 import 'package:wheres_my_bus/widgets/data_status_banner.dart';
-import 'package:wheres_my_bus/widgets/weather_widget.dart';
-
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -17,51 +13,19 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
-  List<dynamic> _userBusStops = [];
+class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateMixin {
+  late TabController _tabController;
 
   @override
   void initState() {
     super.initState();
-    _loadUserBusStops();
+    _tabController = TabController(length: 2, vsync: this);
   }
 
-  Future<void> _loadUserBusStops() async {
-    try {
-      final stops = await StorageService.loadBusStops();
-      setState(() {
-        _userBusStops = stops;
-      });
-    } catch (e) {
-      // Silently handle errors - just show empty state
-      setState(() {
-        _userBusStops = [];
-      });
-    }
-  }
-
-  void _navigateToAddBusStops() async {
-    final result = await Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => const AddBusStopsScreen(),
-      ),
-    );
-
-    if (result == true) {
-      _loadUserBusStops();
-    }
-  }
-
-  void _navigateToBusStopDetail(dynamic busStop) async {
-    await Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => BusStopDetailScreen(busStop: busStop),
-      ),
-    );
-    // Force a rebuild to refresh custom directions
-    setState(() {});
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
   }
 
   @override
@@ -76,7 +40,7 @@ class _HomeScreenState extends State<HomeScreen> {
           // Data status banner
           const DataStatusBanner(),
           
-          // Main content area
+          // Main content area with tabs
           Expanded(
             child: Container(
               decoration: const BoxDecoration(
@@ -88,47 +52,48 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               child: Column(
                 children: [
-                  // Header with + button
+                  // Tab bar
                   Container(
-                    padding: const EdgeInsets.all(AppSizes.paddingLarge),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Expanded(
-                              child: Text(
-                                AppStrings.myBusStops,
-                                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                                  color: AppColors.darkGrey,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ),
-                            // Weather widget
-                            const WeatherWidget(),
-                            const SizedBox(width: AppSizes.paddingSmall),
-                            FloatingActionButton(
-                              key: const ValueKey('add_bus_stops_button'),
-                              onPressed: _navigateToAddBusStops,
-                              backgroundColor: AppColors.londonRed,
-                              foregroundColor: Colors.white,
-                              elevation: 8,
-                              mini: true,
-                              child: const Icon(Icons.add, size: 20),
-                            ),
-                          ],
+                    decoration: BoxDecoration(
+                      border: Border(
+                        bottom: BorderSide(
+                          color: AppColors.darkGrey.withValues(alpha: 0.2),
+                          width: 1,
                         ),
-
+                      ),
+                    ),
+                    child: TabBar(
+                      controller: _tabController,
+                      labelColor: AppColors.londonRed,
+                      unselectedLabelColor: AppColors.darkGrey.withValues(alpha: 0.6),
+                      indicatorColor: AppColors.londonRed,
+                      indicatorWeight: 3,
+                      labelStyle: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                      ),
+                      tabs: const [
+                        Tab(
+                          icon: Icon(Icons.directions_bus),
+                          text: 'TfL Buses',
+                        ),
+                        Tab(
+                          icon: Icon(Icons.pedal_bike),
+                          text: 'Santander Cycles',
+                        ),
                       ],
                     ),
                   ),
                   
-                  // Bus stops list or empty state
+                  // Tab views
                   Expanded(
-                    child: _userBusStops.isEmpty
-                        ? _buildEmptyState()
-                        : _buildBusStopsList(),
+                    child: TabBarView(
+                      controller: _tabController,
+                      children: const [
+                        TflBusesTab(),
+                        SantanderCyclesTab(),
+                      ],
+                    ),
                   ),
                 ],
               ),
@@ -139,103 +104,6 @@ class _HomeScreenState extends State<HomeScreen> {
           const BannerAdPlaceholder(),
         ],
       ),
-
-
-    );
-  }
-
-  Widget _buildEmptyState() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            Icons.directions_bus_outlined,
-            size: 80,
-            color: AppColors.londonRed.withValues(alpha: 0.5),
-          ),
-          const SizedBox(height: AppSizes.paddingLarge),
-          Text(
-            AppStrings.noBusStops,
-            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-              color: AppColors.darkGrey,
-            ),
-          ),
-          const SizedBox(height: AppSizes.paddingMedium),
-          Text(
-            AppStrings.addBusStopsMessage,
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: AppColors.darkGrey.withValues(alpha: 0.7),
-            ),
-            textAlign: TextAlign.center,
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildBusStopsList() {
-    return ListView.builder(
-      padding: const EdgeInsets.symmetric(horizontal: AppSizes.paddingMedium),
-      itemCount: _userBusStops.length,
-      itemBuilder: (context, index) {
-        final busStop = _userBusStops[index];
-        return Dismissible(
-          key: ValueKey(busStop.naptanAtco),
-          direction: DismissDirection.endToStart, // Right to left swipe
-
-          onDismissed: (direction) async {
-            // Store context before async operation
-            final scaffoldMessenger = ScaffoldMessenger.of(context);
-            final busStopName = busStop.stopName;
-            
-            // Remove the bus stop
-            await StorageService.removeBusStop(busStop.naptanAtco);
-            // Update the local list immediately for smooth UI
-            setState(() {
-              _userBusStops.removeAt(index);
-            });
-            // Show confirmation message
-            if (mounted) {
-              scaffoldMessenger.showSnackBar(
-                SnackBar(
-                  content: Text('Removed $busStopName'),
-                  backgroundColor: AppColors.londonRed,
-                  duration: const Duration(seconds: 2),
-                  action: SnackBarAction(
-                    label: 'Undo',
-                    textColor: Colors.white,
-                    onPressed: () async {
-                      // Add the bus stop back
-                      await StorageService.addBusStop(busStop);
-                      // Refresh the list
-                      _loadUserBusStops();
-                    },
-                  ),
-                ),
-              );
-            }
-          },
-          background: Container(
-            alignment: Alignment.centerRight,
-            padding: const EdgeInsets.only(right: AppSizes.paddingLarge),
-            decoration: BoxDecoration(
-              color: Colors.red,
-              borderRadius: BorderRadius.circular(AppSizes.borderRadius),
-            ),
-            child: const Icon(
-              Icons.delete,
-              color: Colors.white,
-              size: 30,
-            ),
-          ),
-          child: BusStopCard(
-            busStop: busStop,
-            onTap: () => _navigateToBusStopDetail(busStop),
-            // Remove the onRemove since we're using swipe now
-          ),
-        );
-      },
     );
   }
 }
