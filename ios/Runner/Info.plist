@@ -66,5 +66,12 @@
 			</array>
 		</dict>
 	</dict>
+	<!-- iOS App Store Algorithm Compliance Declaration -->
+	<!-- Automatically declares "none" for algorithmic content, avoiding manual selection in App Store Connect -->
+	<key>NSAlgorithmicContentDeclaration</key>
+	<dict>
+		<key>NSAlgorithmicContentType</key>
+		<string>none</string>
+	</dict>
 </dict>
 </plist>
