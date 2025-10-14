@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter/foundation.dart'; // Re-added for kDebugMode
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:wheres_my_bus/screens/home_screen.dart';
 import 'package:wheres_my_bus/utils/constants.dart';
 import 'package:wheres_my_bus/services/bus_sequence_service.dart';
 import 'package:wheres_my_bus/services/data_update_service.dart';
+import 'package:wheres_my_bus/services/app_rating_service.dart';
 
 void main() async {
   // Initialize Flutter bindings first
@@ -35,11 +35,37 @@ void main() async {
   // Initialize Bus Sequence Service
   await BusSequenceService.initialize();
   
+  // Initialize App Rating Service
+  await AppRatingService.initialize();
+  
   runApp(const WheresMyBusApp());
 }
 
-class WheresMyBusApp extends StatelessWidget {
+class WheresMyBusApp extends StatefulWidget {
   const WheresMyBusApp({super.key});
+
+  @override
+  State<WheresMyBusApp> createState() => _WheresMyBusAppState();
+}
+
+class _WheresMyBusAppState extends State<WheresMyBusApp> {
+  @override
+  void initState() {
+    super.initState();
+    // Check for rating opportunity after a short delay to ensure UI is ready
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkForRatingOpportunity();
+    });
+  }
+
+  Future<void> _checkForRatingOpportunity() async {
+    // Add a small delay to ensure the home screen is fully loaded
+    await Future.delayed(const Duration(seconds: 2));
+    
+    if (mounted && await AppRatingService.shouldShowRatingDialog()) {
+      await AppRatingService.showRatingDialog(context);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {

@@ -66,6 +66,9 @@ dependencies:
   # Native sharing functionality
   share_plus: ^7.2.1
   
+  # In-app review for app store ratings
+  in_app_review: ^2.0.9
+  
 
 
 dev_dependencies:
