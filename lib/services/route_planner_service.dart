@@ -1,4 +1,3 @@
-import 'dart:collection';
 import 'dart:math' as math;
 
 import 'package:wheres_my_bus/models/bus_stop.dart';
@@ -70,9 +69,12 @@ class RoutePlannerService {
     }
 
     final results = <RoutePlan>[];
-    final queue = PriorityQueue<_SearchState>(
-      (a, b) => a.priority.compareTo(b.priority),
-    );
+    final queue = <_SearchState>[];
+
+    void enqueue(_SearchState state) {
+      queue.add(state);
+      queue.sort((a, b) => a.priority.compareTo(b.priority));
+    }
 
     final initialState = _SearchState(
       currentStop: originNaptan,
@@ -81,12 +83,12 @@ class RoutePlannerService {
       steps: const <_RouteStep>[],
       visitedStops: {originNaptan},
     );
-    queue.add(initialState);
+    enqueue(initialState);
 
     final Map<String, double> bestCostByKey = {};
 
     while (queue.isNotEmpty && results.length < maxResults) {
-      final state = queue.removeFirst();
+      final state = queue.removeAt(0);
 
       final costKey = '${state.currentStop}|${state.lastRouteKey}';
       final previousBest = bestCostByKey[costKey];
@@ -148,7 +150,7 @@ class RoutePlannerService {
           },
         );
 
-        queue.add(newState);
+        enqueue(newState);
       }
     }
 

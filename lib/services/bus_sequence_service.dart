@@ -64,34 +64,75 @@ class BusSequenceService {
       final currentRun = currentStop['run'] as String;
       print('BusSequenceService: Found current stop at sequence $currentSequence, run $currentRun');
       
-      // Find the final destination (highest sequence number for this route AND run)
-      final allStopsForRouteAndRun = _sequences!.where((seq) => 
-        seq['route'] == route && seq['run'] == currentRun
-      ).toList();
-      if (allStopsForRouteAndRun.isEmpty) {
+      final finalStopName = _findFinalStopForRouteRun(route, currentRun);
+      if (finalStopName == null) {
         print('BusSequenceService: No stops found for route $route, run $currentRun');
         return [];
       }
       
-      // Sort by sequence and get the last stop
-      allStopsForRouteAndRun.sort((a, b) => (a['sequence'] as int).compareTo(b['sequence'] as int));
-      final finalStop = allStopsForRouteAndRun.last;
+      print('BusSequenceService: Final destination is $finalStopName for run $currentRun');
       
-      // Clean up the stop name by removing <> symbols
-      String cleanStopName = finalStop['stopName'] as String;
-      cleanStopName = cleanStopName.replaceAll('<>', '').trim();
-      
-      print('BusSequenceService: Final destination is $cleanStopName at sequence ${finalStop['sequence']} for run $currentRun');
-      
-      return [cleanStopName];
+      return [finalStopName];
     } catch (e) {
       print('Error getting final destination: $e');
+      return [];
+    }
+  }
+
+  /// Returns unique final destinations for any routes that serve [busStopCode].
+  static List<String> getFinalDestinationsForStop(String busStopCode) {
+    if (_sequences == null) return [];
+
+    try {
+      final matchingSequences = _sequences!
+          .where((seq) => seq['busStopCode'] == busStopCode)
+          .toList();
+
+      if (matchingSequences.isEmpty) {
+        return [];
+      }
+
+      final destinations = <String>{};
+      for (final seq in matchingSequences) {
+        final route = seq['route'] as String?;
+        final run = seq['run'] as String?;
+        if (route == null || run == null) continue;
+
+        final destination = _findFinalStopForRouteRun(route, run);
+        if (destination != null && destination.isNotEmpty) {
+          destinations.add(destination);
+        }
+      }
+
+      final sorted = destinations.toList()..sort();
+      return sorted;
+    } catch (e) {
+      print('Error getting destinations for stop $busStopCode: $e');
       return [];
     }
   }
   
   static void dispose() {
     _sequences = null;
+  }
+
+  static String? _findFinalStopForRouteRun(String route, String run) {
+    if (_sequences == null) return null;
+
+    final stopsForRouteRun = _sequences!
+        .where((seq) => seq['route'] == route && seq['run'] == run)
+        .toList();
+
+    if (stopsForRouteRun.isEmpty) return null;
+
+    stopsForRouteRun.sort(
+      (a, b) => (a['sequence'] as int).compareTo(b['sequence'] as int),
+    );
+
+    final finalStop = stopsForRouteRun.last['stopName'] as String?;
+    if (finalStop == null) return null;
+
+    return finalStop.replaceAll('<>', '').trim();
   }
   
   static List<String> _parseCsvLine(String line) {
