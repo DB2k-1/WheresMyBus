@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:wheres_my_bus/models/bus_stop.dart';
 import 'package:wheres_my_bus/models/journey_stop.dart';
 import 'package:wheres_my_bus/models/route_plan.dart';
 import 'package:wheres_my_bus/services/route_planner_service.dart';
+import 'package:wheres_my_bus/services/tfl_api_service.dart';
 import 'package:wheres_my_bus/utils/constants.dart';
 
 class RoutePlannerResultsScreen extends StatefulWidget {
@@ -42,13 +44,42 @@ class _RoutePlannerResultsScreenState
           desiredDepartureTime: _searchTime,
         );
 
-        if (plans.isNotEmpty) {
-          return RouteSearchResult(
-            plans: plans,
-            resolvedOrigin: originStop,
-            resolvedDestination: destinationStop,
-          );
+        if (plans.isEmpty) continue;
+
+        final departures = await _loadNextDepartures(plans);
+        final viablePlans = plans.where((plan) {
+          if (plan.legs.isEmpty) return false;
+          for (final leg in plan.legs) {
+            final key = '${leg.origin.busStopCode}|${leg.routeId}';
+            final legDepartures = departures[key];
+            if (legDepartures == null || legDepartures.isEmpty) {
+              return false;
+            }
+          }
+          return true;
+        }).toList();
+
+        if (viablePlans.isEmpty) {
+          continue;
         }
+
+        final filteredDepartures = <String, List<DateTime>>{};
+        for (final plan in viablePlans) {
+          for (final leg in plan.legs) {
+            final key = '${leg.origin.busStopCode}|${leg.routeId}';
+            final legDepartures = departures[key];
+            if (legDepartures != null && legDepartures.isNotEmpty) {
+              filteredDepartures[key] = legDepartures;
+            }
+          }
+        }
+
+        return RouteSearchResult(
+          plans: viablePlans,
+          resolvedOrigin: originStop,
+          resolvedDestination: destinationStop,
+          nextDepartures: filteredDepartures,
+        );
       }
     }
 
@@ -60,7 +91,74 @@ class _RoutePlannerResultsScreenState
       resolvedDestination: widget.destination.candidates.isNotEmpty
           ? widget.destination.candidates.first
           : null,
+      nextDepartures: const <String, List<DateTime>>{},
     );
+  }
+
+  Future<Map<String, List<DateTime>>> _loadNextDepartures(
+    List<RoutePlan> plans,
+  ) async {
+    final requiredLookups = <String, _StopRouteKey>{};
+
+    for (final plan in plans) {
+      for (final leg in plan.legs) {
+        final key = '${leg.origin.busStopCode}|${leg.routeId}';
+        requiredLookups.putIfAbsent(
+          key,
+          () => _StopRouteKey(
+            stop: leg.origin,
+            routeId: leg.routeId,
+          ),
+        );
+      }
+    }
+
+    final results = <String, List<DateTime>>{};
+
+    for (final entry in requiredLookups.entries) {
+      results[entry.key] = await _fetchNextDeparture(
+        entry.value.stop,
+        entry.value.routeId,
+      );
+    }
+
+    return results;
+  }
+
+  Future<List<DateTime>> _fetchNextDeparture(
+    BusStop stop,
+    String routeId,
+  ) async {
+    try {
+      final arrivals = await TflApiService.getBusArrivals(stop.busStopCode);
+      if (arrivals.isEmpty) return const [];
+
+      final now = DateTime.now();
+      final matching = arrivals.where((arrival) {
+        final route = arrival.routeId.toLowerCase();
+        final line = arrival.lineName.toLowerCase();
+        final target = routeId.toLowerCase();
+        return route == target || line == target;
+      }).toList();
+
+      if (matching.isEmpty) return const [];
+
+      matching.sort(
+        (a, b) => a.timeToStation.compareTo(b.timeToStation),
+      );
+
+      final times = <DateTime>[];
+      for (final arrival in matching.take(3)) {
+        if (arrival.timeToStation <= 0) {
+          times.add(now);
+        } else {
+          times.add(now.add(Duration(seconds: arrival.timeToStation)));
+        }
+      }
+      return times;
+    } catch (_) {
+      return const [];
+    }
   }
 
   Future<void> _refresh() async {
@@ -94,6 +192,8 @@ class _RoutePlannerResultsScreenState
 
           final result = snapshot.data;
           final plans = result?.plans ?? [];
+          final nextDepartures =
+              result?.nextDepartures ?? const <String, List<DateTime>>{};
           if (plans.isEmpty) {
             return _ErrorState(
               message:
@@ -113,6 +213,7 @@ class _RoutePlannerResultsScreenState
                   return _JourneyHeader(
                     origin: widget.origin,
                     destination: widget.destination,
+                    planCount: plans.length,
                     resolvedOrigin: result?.resolvedOrigin,
                     resolvedDestination: result?.resolvedDestination,
                     searchTime: _searchTime,
@@ -122,6 +223,7 @@ class _RoutePlannerResultsScreenState
                 return _RoutePlanCard(
                   plan: plan,
                   searchTime: _searchTime,
+                  nextDepartures: nextDepartures,
                 );
               },
             ),
@@ -137,6 +239,7 @@ class _JourneyHeader extends StatelessWidget {
     required this.origin,
     required this.destination,
     required this.searchTime,
+    required this.planCount,
     this.resolvedOrigin,
     this.resolvedDestination,
   });
@@ -144,11 +247,14 @@ class _JourneyHeader extends StatelessWidget {
   final JourneyStop origin;
   final JourneyStop destination;
   final DateTime searchTime;
+  final int planCount;
   final BusStop? resolvedOrigin;
   final BusStop? resolvedDestination;
 
   @override
   Widget build(BuildContext context) {
+    final optionsLabel =
+        '$planCount Route Option${planCount == 1 ? '' : 's'}';
     return Container(
       padding: const EdgeInsets.all(AppSizes.paddingLarge),
       margin: const EdgeInsets.only(bottom: AppSizes.paddingMedium),
@@ -167,10 +273,17 @@ class _JourneyHeader extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Route options',
+            optionsLabel,
             style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                   fontWeight: FontWeight.bold,
                   color: AppColors.darkGrey,
+                ),
+          ),
+          const SizedBox(height: AppSizes.paddingSmall),
+          Text(
+            'Departing around ${_formatTime(searchTime)}',
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: AppColors.darkGrey.withOpacity(0.7),
                 ),
           ),
           const SizedBox(height: AppSizes.paddingMedium),
@@ -178,6 +291,8 @@ class _JourneyHeader extends StatelessWidget {
             label: 'Start',
             selection: origin,
             resolvedStop: resolvedOrigin,
+            showMapLink: true,
+            showSubtitle: true,
             icon: Icons.play_arrow_rounded,
           ),
           const SizedBox(height: AppSizes.paddingSmall),
@@ -185,14 +300,9 @@ class _JourneyHeader extends StatelessWidget {
             label: 'Destination',
             selection: destination,
             resolvedStop: resolvedDestination,
+            showMapLink: false,
+            showSubtitle: false,
             icon: Icons.flag,
-          ),
-          const SizedBox(height: AppSizes.paddingMedium),
-          Text(
-            'Departing around ${_formatTime(searchTime)}',
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: AppColors.darkGrey.withOpacity(0.7),
-                ),
           ),
         ],
       ),
@@ -206,15 +316,21 @@ class _StopSummary extends StatelessWidget {
     required this.selection,
     required this.icon,
     this.resolvedStop,
+    this.showMapLink = false,
+    this.showSubtitle = true,
   });
 
   final String label;
   final JourneyStop selection;
   final BusStop? resolvedStop;
   final IconData icon;
+  final bool showMapLink;
+  final bool showSubtitle;
 
   @override
   Widget build(BuildContext context) {
+    final mapStop =
+        resolvedStop ?? (selection.candidates.isNotEmpty ? selection.candidates.first : null);
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -240,42 +356,82 @@ class _StopSummary extends StatelessWidget {
                       fontWeight: FontWeight.w600,
                     ),
               ),
-              if ((selection.subtitle ?? '').isNotEmpty)
+              if (showSubtitle && (selection.subtitle ?? '').isNotEmpty)
                 Text(
                   selection.subtitle!,
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         color: AppColors.darkGrey.withOpacity(0.7),
                       ),
                 ),
-              if (resolvedStop != null)
-                Text(
-                  'Stop code: ${resolvedStop!.busStopCode}',
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: AppColors.darkGrey.withOpacity(0.6),
-                      ),
-                ),
             ],
           ),
         ),
+        if (showMapLink && mapStop != null)
+          IconButton(
+            icon: Icon(
+              Icons.map_outlined,
+              color: AppColors.londonBlue,
+            ),
+            tooltip: 'Open in Google Maps',
+            onPressed: () => _openInMaps(mapStop),
+          ),
       ],
     );
   }
+
+  Future<void> _openInMaps(BusStop stop) async {
+    final latLng = stop.getLatLng();
+    final lat = latLng['latitude'];
+    final lng = latLng['longitude'];
+
+    if (lat == null || lng == null) return;
+
+    final uri = Uri.parse(
+      'https://www.google.com/maps/search/?api=1&query=$lat,$lng',
+    );
+
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    }
+  }
+}
+
+class _StopRouteKey {
+  const _StopRouteKey({
+    required this.stop,
+    required this.routeId,
+  });
+
+  final BusStop stop;
+  final String routeId;
 }
 
 class _RoutePlanCard extends StatelessWidget {
   const _RoutePlanCard({
     required this.plan,
     required this.searchTime,
+    required this.nextDepartures,
   });
 
   final RoutePlan plan;
   final DateTime searchTime;
+  final Map<String, List<DateTime>> nextDepartures;
 
   @override
   Widget build(BuildContext context) {
     final arrivalTime = plan.estimatedArrivalTime;
     final durationLabel = _formatDuration(plan.totalTravelMinutes);
-
+    final firstLeg = plan.legs.isNotEmpty ? plan.legs.first : null;
+    final firstLegKey = firstLeg != null
+        ? '${firstLeg.origin.busStopCode}|${firstLeg.routeId}'
+        : null;
+    final firstLegDepartures = firstLegKey != null
+        ? nextDepartures[firstLegKey] ?? const <DateTime>[]
+        : const <DateTime>[];
+    final firstDeparture =
+        firstLegDepartures.isNotEmpty ? firstLegDepartures.first : null;
+    final secondDeparture =
+        firstLegDepartures.length > 1 ? firstLegDepartures[1] : null;
     return Container(
       margin: const EdgeInsets.only(bottom: AppSizes.paddingMedium),
       decoration: BoxDecoration(
@@ -317,7 +473,7 @@ class _RoutePlanCard extends StatelessWidget {
                 ),
                 const Spacer(),
                 Text(
-                  durationLabel,
+                  'Travel time: $durationLabel',
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.bold,
                         color: AppColors.darkGrey,
@@ -325,18 +481,12 @@ class _RoutePlanCard extends StatelessWidget {
                 ),
               ],
             ),
-            const SizedBox(height: AppSizes.paddingSmall),
-            Text(
-              'Arrive around ${arrivalTime != null ? _formatTime(arrivalTime) : '—'}',
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: AppColors.darkGrey.withOpacity(0.7),
-                  ),
-            ),
             const SizedBox(height: AppSizes.paddingMedium),
             ...plan.legs.map(
               (leg) => _RouteLegTile(
                 leg: leg,
-                departureFallback: _formatTime(searchTime),
+                departures: nextDepartures[
+                    '${leg.origin.busStopCode}|${leg.routeId}'],
               ),
             ),
             if (plan.legs.isEmpty)
@@ -356,20 +506,19 @@ class _RoutePlanCard extends StatelessWidget {
 class _RouteLegTile extends StatelessWidget {
   const _RouteLegTile({
     required this.leg,
-    required this.departureFallback,
+    required this.departures,
   });
 
   final RouteLeg leg;
-  final String departureFallback;
+  final List<DateTime>? departures;
 
   @override
   Widget build(BuildContext context) {
-    final departureTime =
-        leg.estimatedDepartureTime != null ? _formatTime(leg.estimatedDepartureTime!) : departureFallback;
-    final arrivalTime = leg.estimatedArrivalTime != null
-        ? _formatTime(leg.estimatedArrivalTime!)
-        : '—';
     final stopCount = leg.stopCount;
+    final list = departures ?? const <DateTime>[];
+    final primary = list.isNotEmpty ? list.first : null;
+    final secondary = list.length > 1 ? list[1] : null;
+    final tertiary = list.length > 2 ? list[2] : null;
 
     return Container(
       margin: const EdgeInsets.only(bottom: AppSizes.paddingSmall),
@@ -418,8 +567,9 @@ class _RouteLegTile extends StatelessWidget {
                           ),
                     ),
                     Text(
-                      '$stopCount stop${stopCount == 1 ? '' : 's'} · depart around $departureTime · arrive around $arrivalTime',
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      '$stopCount stop${stopCount == 1 ? '' : 's'}',
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.bold,
                             color: AppColors.darkGrey.withOpacity(0.7),
                           ),
                     ),
@@ -429,35 +579,58 @@ class _RouteLegTile extends StatelessWidget {
             ],
           ),
           const SizedBox(height: AppSizes.paddingMedium),
-          Container(
-            padding: const EdgeInsets.all(AppSizes.paddingSmall),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(AppSizes.borderRadius / 2),
-              border: Border.all(
-                color: AppColors.londonRed.withOpacity(0.15),
-              ),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+          if (primary != null || secondary != null || tertiary != null)
+            const SizedBox(height: AppSizes.paddingSmall),
+          if (primary != null)
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  'Next buses (estimate)',
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.darkGrey,
+                  'Next bus: ${_formatTime(primary)}',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.londonRed,
                       ),
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  'Live options will appear here once countdown lookups are added.',
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: AppColors.darkGrey.withOpacity(0.6),
-                      ),
+                Expanded(
+                  child: Align(
+                    alignment: Alignment.centerRight,
+                    child: Text(
+                      'Arrival: ${leg.estimatedArrivalTime != null ? _formatTime(leg.estimatedArrivalTime!) : '—'}',
+                      style:
+                          Theme.of(context).textTheme.titleMedium?.copyWith(
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.darkGrey,
+                              ),
+                    ),
+                  ),
                 ),
               ],
+            )
+          else
+            Text(
+              'Arrival: ${leg.estimatedArrivalTime != null ? _formatTime(leg.estimatedArrivalTime!) : '—'}',
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.darkGrey,
+                  ),
             ),
-          ),
+          if (secondary != null)
+            Text(
+              'Following bus: ${_formatTime(secondary)}',
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.darkGrey,
+                  ),
+            ),
+          if (tertiary != null)
+            Text(
+              'Later bus: ${_formatTime(tertiary)}',
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.darkGrey.withOpacity(0.7),
+                  ),
+            ),
         ],
       ),
     );
@@ -469,11 +642,13 @@ class RouteSearchResult {
     required this.plans,
     this.resolvedOrigin,
     this.resolvedDestination,
+    required this.nextDepartures,
   });
 
   final List<RoutePlan> plans;
   final BusStop? resolvedOrigin;
   final BusStop? resolvedDestination;
+  final Map<String, List<DateTime>> nextDepartures;
 }
 
 class _ErrorState extends StatelessWidget {
