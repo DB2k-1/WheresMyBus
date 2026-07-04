@@ -130,7 +130,7 @@ class _RoutePlannerResultsScreenState
     String routeId,
   ) async {
     try {
-      final arrivals = await TflApiService.getBusArrivals(stop.busStopCode);
+      final arrivals = await TflApiService.getBusArrivals(stop.naptanAtco);
       if (arrivals.isEmpty) return const [];
 
       final now = DateTime.now();

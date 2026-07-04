@@ -25,7 +25,7 @@ class BusSequenceService {
               'run': values[1],
               'sequence': int.tryParse(values[2]) ?? 0,
               'stopCodeLBSL': values[3],
-              'busStopCode': values[4],
+              'naptanAtco': values[5],
               'stopName': values[6],
             };
           }
@@ -51,7 +51,7 @@ class BusSequenceService {
       
       // Find the current stop in the sequence
       final currentStop = _sequences!.firstWhere(
-        (seq) => seq['route'] == route && seq['busStopCode'] == currentStopCode,
+        (seq) => seq['route'] == route && seq['naptanAtco'] == currentStopCode,
         orElse: () => {},
       );
       
@@ -80,12 +80,12 @@ class BusSequenceService {
   }
 
   /// Returns unique final destinations for any routes that serve [busStopCode].
-  static List<String> getFinalDestinationsForStop(String busStopCode) {
+  static List<String> getFinalDestinationsForStop(String naptanAtco) {
     if (_sequences == null) return [];
 
     try {
       final matchingSequences = _sequences!
-          .where((seq) => seq['busStopCode'] == busStopCode)
+          .where((seq) => seq['naptanAtco'] == naptanAtco)
           .toList();
 
       if (matchingSequences.isEmpty) {
@@ -107,7 +107,7 @@ class BusSequenceService {
       final sorted = destinations.toList()..sort();
       return sorted;
     } catch (e) {
-      print('Error getting destinations for stop $busStopCode: $e');
+      print('Error getting destinations for stop $naptanAtco: $e');
       return [];
     }
   }

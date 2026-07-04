@@ -564,7 +564,7 @@ class _StopGroupBuilder {
   void add(BusStop stop) {
     _stops.add(stop);
     final destinations =
-        BusSequenceService.getFinalDestinationsForStop(stop.busStopCode);
+        BusSequenceService.getFinalDestinationsForStop(stop.naptanAtco);
     _destinations.addAll(destinations);
   }
 

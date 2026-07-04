@@ -61,7 +61,7 @@ class _BusStopDetailScreenState extends State<BusStopDetailScreen> {
     setState(() => _isLoading = true);
     
     try {
-      final arrivals = await TflApiService.getBusArrivals(widget.busStop.busStopCode);
+      final arrivals = await TflApiService.getBusArrivals(widget.busStop.naptanAtco);
       if (mounted) {
         setState(() {
           _busArrivals = arrivals;
@@ -200,12 +200,13 @@ class _BusStopDetailScreenState extends State<BusStopDetailScreen> {
                         const SizedBox(height: AppSizes.paddingSmall),
                         Row(
                           children: [
-                            Text(
-                              'Stop Code: ${widget.busStop.busStopCode}',
-                              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                color: AppColors.darkGrey.withValues(alpha: 0.7),
+                            if (widget.busStop.busStopCode.isNotEmpty && widget.busStop.busStopCode != 'NONE')
+                              Text(
+                                'Stop Code: ${widget.busStop.busStopCode}',
+                                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                  color: AppColors.darkGrey.withValues(alpha: 0.7),
+                                ),
                               ),
-                            ),
                             const SizedBox(width: AppSizes.paddingMedium),
                             GestureDetector(
                               onTap: _editDirection,

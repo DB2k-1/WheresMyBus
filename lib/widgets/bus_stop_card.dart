@@ -111,12 +111,13 @@ class _BusStopCardState extends State<BusStopCard> {
                           const SizedBox(height: 1), // Minimal spacing
                           Row(
                             children: [
-                              Text(
-                                'Code: ${widget.busStop.busStopCode}',
-                                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                  color: AppColors.darkGrey.withValues(alpha: 0.7),
+                              if (widget.busStop.busStopCode.isNotEmpty && widget.busStop.busStopCode != 'NONE')
+                                Text(
+                                  'Code: ${widget.busStop.busStopCode}',
+                                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                    color: AppColors.darkGrey.withValues(alpha: 0.7),
+                                  ),
                                 ),
-                              ),
                               const SizedBox(width: 16),
                               Container(
                                 padding: const EdgeInsets.symmetric(

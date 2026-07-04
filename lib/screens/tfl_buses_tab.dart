@@ -73,9 +73,9 @@ class _TflBusesTabState extends State<TflBusesTab> {
   Widget build(BuildContext context) {
     return CustomScrollView(
       slivers: [
-        const SliverToBoxAdapter(
-          child: RoutePlannerCard(),
-        ),
+        // const SliverToBoxAdapter(
+        //   child: RoutePlannerCard(),
+        // ),
         SliverToBoxAdapter(
           child: Padding(
             padding: const EdgeInsets.all(AppSizes.paddingLarge),

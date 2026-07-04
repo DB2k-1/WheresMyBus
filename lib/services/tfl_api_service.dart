@@ -9,7 +9,7 @@ class TflApiService {
   static Future<List<BusArrival>> getBusArrivals(String stopCode) async {
     try {
       final response = await http.get(
-        Uri.parse('$_baseUrl?StopCode1=$stopCode'),
+        Uri.parse('$_baseUrl?StopCode2=$stopCode'),
         headers: {
           'Content-Type': 'application/json',
           'User-Agent': 'WheresMyBus/1.0',
