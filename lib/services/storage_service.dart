@@ -1,10 +1,12 @@
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:wheres_my_bus/models/bus_stop.dart';
+import 'package:wheres_my_bus/services/custom_direction_service.dart';
 
 class StorageService {
   static const String _busStopsKey = 'user_bus_stops';
   static const String _lastRefreshKey = 'last_refresh_time';
+  static const String _sortModeKey = 'bus_stop_sort_mode';
 
   // Save user's selected bus stops
   static Future<void> saveBusStops(List<BusStop> busStops) async {
@@ -66,6 +68,27 @@ class StorageService {
     final currentStops = await loadBusStops();
     currentStops.removeWhere((stop) => stop.naptanAtco == naptanCode);
     await saveBusStops(currentStops);
+
+    // Clear any custom direction label so re-adding this stop later
+    // shows the original TfL direction, not a stale edit.
+    await CustomDirectionService.removeCustomDirection(naptanCode);
+  }
+
+  // Persist a manually-dragged order for the user's bus stops
+  static Future<void> reorderBusStops(List<BusStop> busStops) async {
+    await saveBusStops(busStops);
+  }
+
+  // Save the user's chosen sort mode ('added' or 'nearest')
+  static Future<void> saveSortMode(String mode) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_sortModeKey, mode);
+  }
+
+  // Load the user's chosen sort mode, defaults to 'added'
+  static Future<String> loadSortMode() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_sortModeKey) ?? 'added';
   }
 
   // Check if a bus stop is in user's list

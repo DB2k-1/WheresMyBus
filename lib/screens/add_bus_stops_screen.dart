@@ -13,8 +13,14 @@ class AddBusStopsScreen extends StatefulWidget {
 }
 
 class _AddBusStopsScreenState extends State<AddBusStopsScreen> {
+  static const int _pageSize = 10;
+
+  List<BusStop> _availableBusStops = [];
   List<BusStop> _nearbyBusStops = [];
+  int _displayCount = _pageSize;
+  bool _hasMoreStops = true;
   bool _isLoading = false;
+  bool _isLoadingMore = false;
   bool _hasLocationPermission = false;
   String? _errorMessage;
 
@@ -58,10 +64,35 @@ class _AddBusStopsScreenState extends State<AddBusStopsScreen> {
     }
   }
 
+  // Fetches nearest bus stops (excluding ones already in the user's list),
+  // growing the request until either `minCount` are found or the whole
+  // dataset has been exhausted.
+  Future<List<BusStop>> _fetchAvailableStops(int minCount) async {
+    final userBusStops = await StorageService.loadBusStopCodes();
+    final userStopCodes = userBusStops.toSet();
+
+    var fetchCount = minCount + 20;
+    List<BusStop> filtered = [];
+    while (true) {
+      final nearestStops = await LocationService.getNearestBusStops(fetchCount);
+      filtered = nearestStops.where((stop) =>
+        !userStopCodes.contains(stop.naptanAtco)
+      ).cast<BusStop>().toList();
+
+      if (filtered.length >= minCount || nearestStops.length < fetchCount) {
+        _hasMoreStops = filtered.length > minCount;
+        break;
+      }
+      fetchCount += 20;
+    }
+    return filtered;
+  }
+
   Future<void> _findNearbyBusStops() async {
     setState(() {
       _isLoading = true;
       _errorMessage = null;
+      _displayCount = _pageSize;
     });
 
     try {
@@ -71,22 +102,11 @@ class _AddBusStopsScreenState extends State<AddBusStopsScreen> {
         setState(() => _hasLocationPermission = true);
       }
 
-      // Get more bus stops to ensure we always have 10 available
-      final nearestStops = await LocationService.getNearestBusStops(30);
-      
-      // Filter out bus stops that are already in user's list
-      final userBusStops = await StorageService.loadBusStopCodes();
-      final userStopCodes = userBusStops.toSet();
-      
-      final availableStops = nearestStops.where((stop) => 
-        !userStopCodes.contains(stop.naptanAtco)
-      ).cast<BusStop>().toList();
-      
-      // Take the first 10 available stops
-      final displayStops = availableStops.take(10).toList();
-      
+      final availableStops = await _fetchAvailableStops(_displayCount);
+
       setState(() {
-        _nearbyBusStops = displayStops;
+        _availableBusStops = availableStops;
+        _nearbyBusStops = availableStops.take(_displayCount).toList();
         _isLoading = false;
       });
     } catch (e) {
@@ -97,46 +117,42 @@ class _AddBusStopsScreenState extends State<AddBusStopsScreen> {
     }
   }
 
-  Future<void> _findMoreBusStops() async {
+  Future<void> _showMoreBusStops() async {
+    setState(() => _isLoadingMore = true);
+
     try {
-      // Get more bus stops to fill up to 10
-      final nearestStops = await LocationService.getNearestBusStops(40);
-      
-      // Filter out bus stops that are already in user's list
-      final userBusStops = await StorageService.loadBusStopCodes();
-      final userStopCodes = userBusStops.toSet();
-      
-      final availableStops = nearestStops.where((stop) => 
-        !userStopCodes.contains(stop.naptanAtco) &&
-        !_nearbyBusStops.any((existing) => existing.naptanAtco == stop.naptanAtco)
-      ).cast<BusStop>().toList();
-      
-      // Add new stops to fill up to 10
-      final neededStops = 10 - _nearbyBusStops.length;
-      final newStops = availableStops.take(neededStops).toList();
-      
+      final neededCount = _displayCount + _pageSize;
+      if (_availableBusStops.length < neededCount) {
+        _availableBusStops = await _fetchAvailableStops(neededCount);
+      }
+
       setState(() {
-        _nearbyBusStops.addAll(newStops);
+        _displayCount = neededCount;
+        _nearbyBusStops = _availableBusStops.take(_displayCount).toList();
+        _isLoadingMore = false;
       });
     } catch (e) {
-      // Silently handle errors when fetching more stops
+      setState(() => _isLoadingMore = false);
     }
   }
 
   Future<void> _addBusStop(BusStop busStop) async {
     try {
       await StorageService.addBusStop(busStop);
-      
-      // Remove the added bus stop from the nearby list
+
+      // Remove the added bus stop from both the displayed and full lists
       setState(() {
+        _availableBusStops.removeWhere((stop) => stop.naptanAtco == busStop.naptanAtco);
         _nearbyBusStops.removeWhere((stop) => stop.naptanAtco == busStop.naptanAtco);
       });
-      
-      // If we have fewer than 10 stops, try to fetch more
-      if (_nearbyBusStops.length < 10) {
-        _findMoreBusStops();
+
+      // Top up the displayed list from stops we've already fetched
+      if (_nearbyBusStops.length < _displayCount && _availableBusStops.length > _nearbyBusStops.length) {
+        setState(() {
+          _nearbyBusStops = _availableBusStops.take(_displayCount).toList();
+        });
       }
-      
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -323,8 +339,29 @@ class _AddBusStopsScreenState extends State<AddBusStopsScreen> {
   Widget _buildBusStopsList() {
     return ListView.builder(
       padding: const EdgeInsets.all(AppSizes.paddingMedium),
-      itemCount: _nearbyBusStops.length,
+      itemCount: _nearbyBusStops.length + (_hasMoreStops ? 1 : 0),
       itemBuilder: (context, index) {
+        if (index == _nearbyBusStops.length) {
+          return Padding(
+            padding: const EdgeInsets.only(top: AppSizes.paddingSmall),
+            child: Center(
+              child: _isLoadingMore
+                  ? const Padding(
+                      padding: EdgeInsets.all(AppSizes.paddingMedium),
+                      child: CircularProgressIndicator(),
+                    )
+                  : OutlinedButton(
+                      onPressed: _showMoreBusStops,
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: AppColors.londonRed,
+                        side: const BorderSide(color: AppColors.londonRed),
+                      ),
+                      child: const Text('Show the next 10 stops'),
+                    ),
+            ),
+          );
+        }
+
         final busStop = _nearbyBusStops[index];
         return BusStopCard(
           busStop: busStop,
