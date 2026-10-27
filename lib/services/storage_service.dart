@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:wheres_my_bus/models/bus_stop.dart';
+import 'package:wheres_my_bus/services/bus_stop_service.dart';
 import 'package:wheres_my_bus/services/custom_direction_service.dart';
 
 class StorageService {
@@ -35,7 +36,7 @@ class StorageService {
 
     try {
       final List<dynamic> decoded = jsonDecode(busStopsJson);
-      return decoded.map((json) => BusStop(
+      final stops = decoded.map((json) => BusStop(
         stopCodeLbsl: json['stopCodeLbsl'],
         busStopCode: json['busStopCode'],
         naptanAtco: json['naptanAtco'],
@@ -46,10 +47,30 @@ class StorageService {
         stopArea: json['stopArea'],
         virtualBusStop: json['virtualBusStop'],
       )).toList();
+      return await _repairSplitNames(stops);
     } catch (e) {
       // If there's an error parsing, return empty list
       return [];
     }
+  }
+
+  // Before 1.12.0 the stop list was split on every comma, so a stop whose
+  // name has a comma in it (e.g. "Guy, Earl of Warwick") was saved with a
+  // cut-off name starting with a quote and wrong location and heading. Its
+  // Naptan code comes before the name so it's intact: look the stop up again
+  // and save the corrected list.
+  static Future<List<BusStop>> _repairSplitNames(List<BusStop> stops) async {
+    if (!stops.any((stop) => stop.stopName.startsWith('"'))) return stops;
+    final List<BusStop> repaired = [];
+    for (final stop in stops) {
+      if (stop.stopName.startsWith('"')) {
+        repaired.add(await BusStopService.getBusStopByNaptan(stop.naptanAtco) ?? stop);
+      } else {
+        repaired.add(stop);
+      }
+    }
+    await saveBusStops(repaired);
+    return repaired;
   }
 
   // Add a bus stop to user's list

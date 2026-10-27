@@ -2,11 +2,12 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:wheres_my_bus/models/bus_stop.dart';
 import 'package:wheres_my_bus/screens/add_bus_stops_screen.dart';
-import 'package:wheres_my_bus/screens/bus_stop_detail_screen.dart';
 import 'package:wheres_my_bus/services/location_service.dart';
 import 'package:wheres_my_bus/services/storage_service.dart';
 import 'package:wheres_my_bus/utils/constants.dart';
+import 'package:wheres_my_bus/utils/screenshot_mode.dart';
 import 'package:wheres_my_bus/widgets/bus_stop_card.dart';
+import 'package:wheres_my_bus/widgets/detail_pane_scope.dart';
 import 'package:wheres_my_bus/widgets/weather_widget.dart';
 import 'package:wheres_my_bus/widgets/route_planner_card.dart';
 
@@ -26,6 +27,8 @@ class _TflBusesTabState extends State<TflBusesTab> {
   List<BusStop> _displayedBusStops = [];
   BusStopSortMode _sortMode = BusStopSortMode.added;
   bool _isLoading = true;
+  // The stop shown in the detail pane, if there is one.
+  String? _selectedId;
 
   @override
   void initState() {
@@ -37,7 +40,11 @@ class _TflBusesTabState extends State<TflBusesTab> {
     setState(() => _isLoading = true);
 
     try {
-      final stops = await StorageService.loadBusStops();
+      var stops = await StorageService.loadBusStops();
+      if (screenshotMode && stops.isEmpty) {
+        await StorageService.saveBusStops(screenshotBusStops);
+        stops = await StorageService.loadBusStops();
+      }
       final savedMode = await StorageService.loadSortMode();
       if (mounted) {
         setState(() {
@@ -46,6 +53,9 @@ class _TflBusesTabState extends State<TflBusesTab> {
           _isLoading = false;
         });
         await _updateDisplayedBusStops();
+        if (mounted && screenshotView == 'buses' && stops.isNotEmpty) {
+          _navigateToBusStopDetail(stops.first);
+        }
       }
     } catch (e) {
       if (mounted) {
@@ -102,7 +112,11 @@ class _TflBusesTabState extends State<TflBusesTab> {
     final scaffoldMessenger = ScaffoldMessenger.of(context);
     final busStopName = busStop.stopName;
 
+    final scope = context.getInheritedWidgetOfExactType<DetailPaneScope>();
+
     await StorageService.removeBusStop(busStop.naptanAtco);
+    scope?.onBusStopRemoved(busStop.naptanAtco);
+    if (!mounted) return;
     setState(() {
       _userBusStops.removeWhere((stop) => stop.naptanAtco == busStop.naptanAtco);
       _displayedBusStops.removeWhere((stop) => stop.naptanAtco == busStop.naptanAtco);
@@ -140,19 +154,18 @@ class _TflBusesTabState extends State<TflBusesTab> {
     }
   }
 
-  void _navigateToBusStopDetail(dynamic busStop) async {
-    await Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => BusStopDetailScreen(busStop: busStop),
-      ),
-    );
+  void _navigateToBusStopDetail(BusStop busStop) async {
+    // Shown beside the list on wide and folding screens, pushed otherwise.
+    await DetailPaneScope.openBusStop(context, busStop);
     // Force a rebuild to refresh custom directions
-    setState(() {});
+    if (mounted) setState(() {});
   }
 
   @override
   Widget build(BuildContext context) {
+    // Rebuilds when the selection or a custom direction changes in the
+    // detail pane.
+    _selectedId = DetailPaneScope.maybeOf(context)?.selectedBusStopId;
     return CustomScrollView(
       slivers: [
         // const SliverToBoxAdapter(
@@ -306,6 +319,7 @@ class _TflBusesTabState extends State<TflBusesTab> {
       ),
       child: BusStopCard(
         busStop: busStop,
+        selected: busStop.naptanAtco == _selectedId,
         onTap: () => _navigateToBusStopDetail(busStop),
       ),
     );

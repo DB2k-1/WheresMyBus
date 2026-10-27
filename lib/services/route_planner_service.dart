@@ -4,6 +4,7 @@ import 'package:wheres_my_bus/models/bus_stop.dart';
 import 'package:wheres_my_bus/models/route_plan.dart';
 import 'package:wheres_my_bus/services/bus_stop_service.dart';
 import 'package:wheres_my_bus/services/data_update_service.dart';
+import 'package:wheres_my_bus/utils/csv_line.dart';
 
 class RoutePlannerService {
   RoutePlannerService._();
@@ -158,16 +159,14 @@ class RoutePlannerService {
   }
 
   static void _buildGraph(String csvContent) {
-    final lines = csvContent.split('\n');
-    if (lines.length <= 1) return;
+    // Stop names can contain quoted commas and line breaks.
+    final rows = parseCsv(csvContent);
+    if (rows.length <= 1) return;
 
     // Group sequence stops by route + run.
     final Map<String, List<_SequenceStop>> groupedStops = {};
 
-    for (final line in lines.skip(1)) {
-      if (line.trim().isEmpty) continue;
-
-      final values = _parseCsvLine(line);
+    for (final values in rows.skip(1)) {
       if (values.length < 7) continue;
 
       final routeId = values[0];
@@ -347,27 +346,6 @@ class RoutePlannerService {
     return hours * 60;
   }
 
-  static List<String> _parseCsvLine(String line) {
-    final results = <String>[];
-    final buffer = StringBuffer();
-    var inQuotes = false;
-
-    for (var i = 0; i < line.length; i++) {
-      final char = line[i];
-
-      if (char == '"') {
-        inQuotes = !inQuotes;
-      } else if (char == ',' && !inQuotes) {
-        results.add(buffer.toString().trim());
-        buffer.clear();
-      } else {
-        buffer.write(char);
-      }
-    }
-
-    results.add(buffer.toString().trim());
-    return results;
-  }
 }
 
 class _RouteEdge {

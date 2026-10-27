@@ -199,7 +199,11 @@ class _AddBusStopsScreenState extends State<AddBusStopsScreen> {
           ),
         ],
       ),
-      body: Column(
+      // Clear of the notch and rounded corners in landscape.
+      body: SafeArea(
+        top: false,
+        bottom: false,
+        child: Column(
         children: [
           // Location permission status
           if (!_hasLocationPermission)
@@ -291,6 +295,7 @@ class _AddBusStopsScreenState extends State<AddBusStopsScreen> {
               ),
             ),
         ],
+      ),
       ),
     );
   }

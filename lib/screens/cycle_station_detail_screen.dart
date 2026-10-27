@@ -2,13 +2,19 @@ import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:wheres_my_bus/models/cycle_hire_station.dart';
 import 'package:wheres_my_bus/utils/constants.dart';
+import 'package:wheres_my_bus/widgets/detail_pane_scope.dart';
 
 class CycleStationDetailScreen extends StatelessWidget {
   final CycleHireStation station;
 
+  /// Shown in the home screen's detail pane rather than pushed: no back
+  /// button.
+  final bool embedded;
+
   const CycleStationDetailScreen({
     super.key,
     required this.station,
+    this.embedded = false,
   });
 
   Future<void> _openInMaps(BuildContext context) async {
@@ -44,12 +50,14 @@ class CycleStationDetailScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (!embedded) DetailPaneScope.closeIfPaneShown(context);
     return Scaffold(
       backgroundColor: AppColors.cream,
       appBar: AppBar(
         title: const Text('Station Details'),
         backgroundColor: AppColors.londonRed,
         foregroundColor: Colors.white,
+        automaticallyImplyLeading: !embedded,
         actions: [
           IconButton(
             icon: const Icon(Icons.directions),
@@ -58,7 +66,9 @@ class CycleStationDetailScreen extends StatelessWidget {
           ),
         ],
       ),
-      body: SingleChildScrollView(
+      body: SafeArea(
+        top: false,
+        child: SingleChildScrollView(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -277,6 +287,7 @@ class CycleStationDetailScreen extends StatelessWidget {
             const SizedBox(height: AppSizes.paddingLarge),
           ],
         ),
+      ),
       ),
     );
   }

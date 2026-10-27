@@ -9,9 +9,13 @@ class BusStopCard extends StatefulWidget {
   final bool showAddButton;
   final VoidCallback? onAdd;
 
+  /// Outlined when this stop is open in the detail pane.
+  final bool selected;
+
   const BusStopCard({
     super.key,
     required this.busStop,
+    this.selected = false,
     this.onTap,
     this.onRemove,
     this.showAddButton = false,
@@ -64,6 +68,9 @@ class _BusStopCardState extends State<BusStopCard> {
       elevation: 2,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(AppSizes.borderRadius),
+        side: widget.selected
+            ? const BorderSide(color: AppColors.londonRed, width: 2)
+            : BorderSide.none,
       ),
       child: InkWell(
         onTap: widget.onTap,
@@ -109,7 +116,11 @@ class _BusStopCardState extends State<BusStopCard> {
                             overflow: TextOverflow.ellipsis,
                           ),
                           const SizedBox(height: 1), // Minimal spacing
-                          Row(
+                          // Wraps onto two lines in a narrow pane.
+                          Wrap(
+                            spacing: 16,
+                            runSpacing: 4,
+                            crossAxisAlignment: WrapCrossAlignment.center,
                             children: [
                               if (widget.busStop.busStopCode.isNotEmpty && widget.busStop.busStopCode != 'NONE')
                                 Text(
@@ -118,7 +129,6 @@ class _BusStopCardState extends State<BusStopCard> {
                                     color: AppColors.darkGrey.withValues(alpha: 0.7),
                                   ),
                                 ),
-                              const SizedBox(width: 16),
                               Container(
                                 padding: const EdgeInsets.symmetric(
                                   horizontal: AppSizes.paddingSmall,

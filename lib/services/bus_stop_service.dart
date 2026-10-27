@@ -1,7 +1,7 @@
-import 'dart:convert';
 import 'package:flutter/services.dart';
 import 'package:wheres_my_bus/models/bus_stop.dart';
 import 'package:wheres_my_bus/services/data_update_service.dart';
+import 'package:wheres_my_bus/utils/csv_line.dart';
 
 class BusStopService {
   static List<BusStop>? _allBusStops;
@@ -21,11 +21,12 @@ class BusStopService {
     _isLoading = true;
     try {
       final String csvData = await DataUpdateService.getBusStopsData();
-      final List<String> lines = const LineSplitter().convert(csvData);
-      
-      // Skip header row and parse each line
-      _allBusStops = lines.skip(1).map((line) {
-        final values = line.split(',');
+      // Names can contain quoted commas and line breaks, e.g.
+      // "Guy, Earl of Warwick", so parse the whole file rather than by line.
+      final List<List<String>> rows = parseCsv(csvData);
+
+      // Skip header row and parse each row
+      _allBusStops = rows.skip(1).map((values) {
         if (values.length >= 9) {
           return BusStop.fromCsv(values);
         }

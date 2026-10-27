@@ -6,7 +6,10 @@ import 'package:wheres_my_bus/services/data_update_service.dart';
 import 'package:wheres_my_bus/widgets/data_status_banner.dart';
 
 class LogoPlaceholder extends StatefulWidget {
-  const LogoPlaceholder({super.key});
+  /// Forces the short header (e.g. the bottom half of a half-folded phone).
+  final bool compact;
+
+  const LogoPlaceholder({super.key, this.compact = false});
 
   @override
   State<LogoPlaceholder> createState() => _LogoPlaceholderState();
@@ -38,9 +41,11 @@ class _LogoPlaceholderState extends State<LogoPlaceholder> {
     }
     
     // Use native share functionality
-    await Share.share(
-      shareMessage,
-      subject: 'Check out Where\'s My Bus!',
+    await SharePlus.instance.share(
+      ShareParams(
+        text: shareMessage,
+        subject: 'Check out Where\'s My Bus!',
+      ),
     );
   }
 
@@ -85,10 +90,23 @@ class _LogoPlaceholderState extends State<LogoPlaceholder> {
 
   @override
   Widget build(BuildContext context) {
+    final EdgeInsets insets = MediaQuery.paddingOf(context);
+    // Compact on short windows (landscape, the bottom half of a half-folded
+    // phone) so the stop list keeps most of the height.
+    final bool compact =
+        widget.compact || MediaQuery.sizeOf(context).height < 500;
+    final double logoSize = compact ? 36 : 50;
+    final double padding = compact ? AppSizes.paddingSmall : AppSizes.paddingMedium;
+
     return Container(
       width: double.infinity,
-      height: AppSizes.logoHeight + 60, // Extend height to include top area
-      padding: const EdgeInsets.all(AppSizes.paddingMedium),
+      // Clear of the status bar / Dynamic Island and any side insets.
+      padding: EdgeInsets.fromLTRB(
+        AppSizes.paddingMedium + insets.left,
+        insets.top + padding,
+        AppSizes.paddingMedium + insets.right,
+        padding,
+      ),
       decoration: BoxDecoration(
         color: AppColors.londonRed,
         boxShadow: [
@@ -99,69 +117,77 @@ class _LogoPlaceholderState extends State<LogoPlaceholder> {
           ),
         ],
       ),
-              child: Padding(
-          padding: const EdgeInsets.only(top: 60), // Push content down to avoid dynamic island
-          child: Row(
-            children: [
-              // Logo and app info (left side)
-              Expanded(
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    GestureDetector(
-                      onTap: _handleLogoTap,
-                      child: Image.asset(
-                        'assets/images/logo.png',
-                        height: 50,
-                        width: 50,
-                        fit: BoxFit.contain,
-                        errorBuilder: (context, error, stackTrace) {
-                          // Fallback to bus icon if logo fails to load
-                          return Icon(
-                            Icons.directions_bus,
-                            color: Colors.white,
-                            size: 50,
-                          );
-                        },
-                      ),
+      child: SizedBox(
+        height: compact ? 44 : 68,
+        child: Row(
+          children: [
+            // Logo and app info (left side)
+            Expanded(
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  GestureDetector(
+                    onTap: _handleLogoTap,
+                    child: Image.asset(
+                      'assets/images/logo.png',
+                      height: logoSize,
+                      width: logoSize,
+                      fit: BoxFit.contain,
+                      errorBuilder: (context, error, stackTrace) {
+                        // Fallback to bus icon if logo fails to load
+                        return Icon(
+                          Icons.directions_bus,
+                          color: Colors.white,
+                          size: logoSize,
+                        );
+                      },
                     ),
-                    const SizedBox(width: AppSizes.paddingMedium),
-                    Expanded(
+                  ),
+                  const SizedBox(width: AppSizes.paddingMedium),
+                  Flexible(
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerLeft,
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
                             'Where\'s My Bus?',
-                            style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                            style: (compact
+                                    ? Theme.of(context).textTheme.titleLarge
+                                    : Theme.of(context).textTheme.headlineMedium)
+                                ?.copyWith(
                               color: Colors.white,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
-                          Text(
-                            'London Bus Tracker',
-                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              color: Colors.white.withValues(alpha: 0.9),
+                          if (!compact)
+                            Text(
+                              'London Bus Tracker',
+                              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                    color: Colors.white.withValues(alpha: 0.9),
+                                  ),
                             ),
-                          ),
                         ],
                       ),
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
-              // Share button (right side)
-              GestureDetector(
-                onTap: _shareApp,
-                child: Icon(
-                  _getShareIcon(),
-                  color: Colors.white,
-                  size: 24,
-                ),
+            ),
+            // Share button (right side)
+            GestureDetector(
+              onTap: _shareApp,
+              child: Icon(
+                _getShareIcon(),
+                color: Colors.white,
+                size: 24,
               ),
-            ],
-          ),
+            ),
+          ],
         ),
+      ),
     );
   }
 }

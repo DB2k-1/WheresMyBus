@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:wheres_my_bus/screens/home_screen.dart';
 import 'package:wheres_my_bus/utils/constants.dart';
+import 'package:wheres_my_bus/utils/screenshot_mode.dart';
 import 'package:wheres_my_bus/services/bus_sequence_service.dart';
 import 'package:wheres_my_bus/services/data_update_service.dart';
 import 'package:wheres_my_bus/services/app_rating_service.dart';
@@ -11,9 +12,12 @@ void main() async {
   // Initialize Flutter bindings first
   WidgetsFlutterBinding.ensureInitialized();
   
-  // Force portrait mode only
+  // Portrait and landscape, so the app fills foldables, iPhone Duo's inner
+  // display and landscape phones. Upside-down portrait stays off.
   SystemChrome.setPreferredOrientations([
     DeviceOrientation.portraitUp,
+    DeviceOrientation.landscapeLeft,
+    DeviceOrientation.landscapeRight,
   ]);
   
   // Configure system UI overlay style
@@ -49,6 +53,10 @@ class WheresMyBusApp extends StatefulWidget {
 }
 
 class _WheresMyBusAppState extends State<WheresMyBusApp> {
+  // The rating dialog needs a context below MaterialApp (for its Navigator
+  // and localizations); this widget's own context sits above it.
+  final GlobalKey<NavigatorState> _navigatorKey = GlobalKey<NavigatorState>();
+
   @override
   void initState() {
     super.initState();
@@ -59,17 +67,21 @@ class _WheresMyBusAppState extends State<WheresMyBusApp> {
   }
 
   Future<void> _checkForRatingOpportunity() async {
+    if (screenshotMode) return;
     // Add a small delay to ensure the home screen is fully loaded
     await Future.delayed(const Duration(seconds: 2));
     
-    if (mounted && await AppRatingService.shouldShowRatingDialog()) {
-      await AppRatingService.showRatingDialog(context);
+    if (!mounted || !await AppRatingService.shouldShowRatingDialog()) return;
+    final BuildContext? navigatorContext = _navigatorKey.currentContext;
+    if (navigatorContext != null && navigatorContext.mounted) {
+      await AppRatingService.showRatingDialog(navigatorContext);
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      navigatorKey: _navigatorKey,
       title: 'WheresMyBus',
       debugShowCheckedModeBanner: false,
       showPerformanceOverlay: false,

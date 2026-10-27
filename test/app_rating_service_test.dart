@@ -130,6 +130,27 @@ void main() {
       expect(shouldShow, equals(true));
     });
 
+    test('Not Now after a low rating waits another 10 uses', () async {
+      await AppRatingService.resetRatingPreferences();
+      for (int i = 0; i < 5; i++) {
+        await AppRatingService.initialize();
+      }
+      await AppRatingService.markAsRated(ratingValue: 2);
+      for (int i = 0; i < 10; i++) {
+        await AppRatingService.initialize();
+      }
+      expect(await AppRatingService.shouldShowRatingDialog(), isTrue);
+
+      // "Not Now" shouldn't leave it due on every launch.
+      await AppRatingService.markAsDeclined();
+      await AppRatingService.initialize();
+      expect(await AppRatingService.shouldShowRatingDialog(), isFalse);
+      for (int i = 0; i < 9; i++) {
+        await AppRatingService.initialize();
+      }
+      expect(await AppRatingService.shouldShowRatingDialog(), isTrue);
+    });
+
     test('should reset preferences correctly', () async {
       // Initialize and mark as rated
       await AppRatingService.initialize();

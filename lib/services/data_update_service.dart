@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:wheres_my_bus/utils/csv_line.dart';
 
 class DataUpdateService {
   static const String _lastUpdateKey = 'last_data_update';
@@ -221,7 +222,7 @@ class DataUpdateService {
       int validLines = 0;
       for (int i = 1; i < lines.length && i < 10; i++) {
         if (lines[i].trim().isNotEmpty) {
-          final values = lines[i].split(',');
+          final values = parseCsvLine(lines[i]);
           if (values.length >= 9) validLines++;
         }
       }
@@ -251,7 +252,7 @@ class DataUpdateService {
       int validLines = 0;
       for (int i = 1; i < lines.length && i < 10; i++) {
         if (lines[i].trim().isNotEmpty) {
-          final values = lines[i].split(',');
+          final values = parseCsvLine(lines[i]);
           if (values.length >= 7) validLines++;
         }
       }

@@ -32,6 +32,4 @@ class AppSizes {
   static const double paddingMedium = 16.0;
   static const double paddingLarge = 24.0;
   static const double borderRadius = 8.0;
-  static const double logoHeight = 100.0; // Increased height to accommodate top margin
-  static const double bannerHeight = 90.0; // Increased height for proper ad banner size
 }

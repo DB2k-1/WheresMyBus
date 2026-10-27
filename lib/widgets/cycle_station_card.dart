@@ -8,9 +8,13 @@ class CycleStationCard extends StatelessWidget {
   final VoidCallback? onAddRemove;
   final bool isSaved;
 
+  /// Outlined when this station is open in the detail pane.
+  final bool selected;
+
   const CycleStationCard({
     super.key,
     required this.station,
+    this.selected = false,
     this.onTap,
     this.onAddRemove,
     this.isSaved = false,
@@ -23,6 +27,9 @@ class CycleStationCard extends StatelessWidget {
       elevation: 2,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(AppSizes.borderRadius),
+        side: selected
+            ? const BorderSide(color: AppColors.londonRed, width: 2)
+            : BorderSide.none,
       ),
       child: InkWell(
         onTap: onTap,

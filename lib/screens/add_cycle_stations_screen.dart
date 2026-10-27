@@ -127,7 +127,11 @@ class _AddCycleStationsScreenState extends State<AddCycleStationsScreen> {
           ),
         ],
       ),
-      body: Column(
+      // Clear of the notch and rounded corners in landscape.
+      body: SafeArea(
+        top: false,
+        bottom: false,
+        child: Column(
         children: [
           // Search bar
           Container(
@@ -270,6 +274,7 @@ class _AddCycleStationsScreenState extends State<AddCycleStationsScreen> {
               ),
             ),
         ],
+      ),
       ),
     );
   }

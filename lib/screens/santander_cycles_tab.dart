@@ -4,10 +4,11 @@ import 'package:wheres_my_bus/models/cycle_hire_station.dart';
 import 'package:wheres_my_bus/services/cycle_hire_service.dart';
 import 'package:wheres_my_bus/services/cycle_storage_service.dart';
 import 'package:wheres_my_bus/services/location_service.dart';
-import 'package:wheres_my_bus/screens/cycle_station_detail_screen.dart';
 import 'package:wheres_my_bus/screens/add_cycle_stations_screen.dart';
 import 'package:wheres_my_bus/utils/constants.dart';
+import 'package:wheres_my_bus/utils/screenshot_mode.dart';
 import 'package:wheres_my_bus/widgets/cycle_station_card.dart';
+import 'package:wheres_my_bus/widgets/detail_pane_scope.dart';
 
 class SantanderCyclesTab extends StatefulWidget {
   const SantanderCyclesTab({super.key});
@@ -104,6 +105,9 @@ class _SantanderCyclesTabState extends State<SantanderCyclesTab> {
           _nearestStations = stations;
           _isLoadingNearest = false;
         });
+        if (screenshotView == 'cycles' && stations.isNotEmpty) {
+          _navigateToStationDetail(stations.first);
+        }
       }
     } catch (e) {
       if (mounted) {
@@ -134,12 +138,8 @@ class _SantanderCyclesTabState extends State<SantanderCyclesTab> {
   }
 
   void _navigateToStationDetail(CycleHireStation station) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => CycleStationDetailScreen(station: station),
-      ),
-    );
+    // Shown beside the list on wide and folding screens, pushed otherwise.
+    DetailPaneScope.openCycleStation(context, station);
   }
 
   Future<void> _removeSavedStation(CycleHireStation station) async {
@@ -149,6 +149,8 @@ class _SantanderCyclesTabState extends State<SantanderCyclesTab> {
 
   @override
   Widget build(BuildContext context) {
+    final String? selectedId =
+        DetailPaneScope.maybeOf(context)?.selectedCycleStationId;
     return RefreshIndicator(
       onRefresh: _refreshData,
       color: AppColors.londonRed,
@@ -216,6 +218,7 @@ class _SantanderCyclesTabState extends State<SantanderCyclesTab> {
                   const SizedBox(height: AppSizes.paddingSmall),
                   ..._savedStations.map((station) => CycleStationCard(
                     station: station,
+                    selected: station.id == selectedId,
                     onTap: () => _navigateToStationDetail(station),
                     onAddRemove: () => _removeSavedStation(station),
                     isSaved: true,
@@ -263,6 +266,7 @@ class _SantanderCyclesTabState extends State<SantanderCyclesTab> {
                   }).map((station) {
                     return CycleStationCard(
                       station: station,
+                      selected: station.id == selectedId,
                       onTap: () => _navigateToStationDetail(station),
                       onAddRemove: () async {
                         await CycleStorageService.addStation(station);

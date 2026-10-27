@@ -7,12 +7,25 @@ import 'package:wheres_my_bus/services/custom_direction_service.dart';
 import 'package:wheres_my_bus/utils/constants.dart';
 import 'package:wheres_my_bus/widgets/bus_arrival_card.dart';
 import 'package:wheres_my_bus/widgets/banner_ad_placeholder.dart';
+import 'package:wheres_my_bus/widgets/detail_pane_scope.dart';
 import 'package:wheres_my_bus/widgets/edit_direction_dialog.dart';
 
 class BusStopDetailScreen extends StatefulWidget {
   final dynamic busStop;
 
-  const BusStopDetailScreen({super.key, required this.busStop});
+  /// Shown in the home screen's detail pane rather than pushed: no back
+  /// button, and no banner (the list pane has one).
+  final bool embedded;
+
+  /// Called when the user changes this stop's direction label.
+  final VoidCallback? onDirectionChanged;
+
+  const BusStopDetailScreen({
+    super.key,
+    required this.busStop,
+    this.embedded = false,
+    this.onDirectionChanged,
+  });
 
   @override
   State<BusStopDetailScreen> createState() => _BusStopDetailScreenState();
@@ -35,6 +48,7 @@ class _BusStopDetailScreenState extends State<BusStopDetailScreen> {
 
   Future<void> _loadDisplayDirection() async {
     final customDirection = await CustomDirectionService.getCustomDirection(widget.busStop.naptanAtco);
+    if (!mounted) return;
     setState(() {
       _displayDirection = customDirection ?? widget.busStop.userFriendlyDirection;
     });
@@ -93,10 +107,11 @@ class _BusStopDetailScreenState extends State<BusStopDetailScreen> {
       ),
     );
 
-    if (result != null) {
+    if (result != null && mounted) {
       setState(() {
         _displayDirection = result;
       });
+      widget.onDirectionChanged?.call();
     }
   }
 
@@ -138,12 +153,14 @@ class _BusStopDetailScreenState extends State<BusStopDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (!widget.embedded) DetailPaneScope.closeIfPaneShown(context);
     return Scaffold(
       backgroundColor: AppColors.cream,
       appBar: AppBar(
         title: const Text('Where\'s My Bus?'),
         backgroundColor: AppColors.londonRed,
         foregroundColor: Colors.white,
+        automaticallyImplyLeading: !widget.embedded,
         actions: [
           IconButton(
             onPressed: _refreshArrivals,
@@ -155,7 +172,11 @@ class _BusStopDetailScreenState extends State<BusStopDetailScreen> {
         children: [
           // Main scrollable content
           Expanded(
-            child: SingleChildScrollView(
+            child: SafeArea(
+              top: false,
+              // The banner keeps clear of the bottom inset when there is one.
+              bottom: widget.embedded,
+              child: SingleChildScrollView(
               padding: const EdgeInsets.only(bottom: AppSizes.paddingMedium),
               child: Column(
                 children: [
@@ -198,7 +219,11 @@ class _BusStopDetailScreenState extends State<BusStopDetailScreen> {
                           ],
                         ),
                         const SizedBox(height: AppSizes.paddingSmall),
-                        Row(
+                        // Wraps onto two lines in a narrow pane.
+                        Wrap(
+                          spacing: AppSizes.paddingMedium,
+                          runSpacing: 4,
+                          crossAxisAlignment: WrapCrossAlignment.center,
                           children: [
                             if (widget.busStop.busStopCode.isNotEmpty && widget.busStop.busStopCode != 'NONE')
                               Text(
@@ -207,7 +232,6 @@ class _BusStopDetailScreenState extends State<BusStopDetailScreen> {
                                   color: AppColors.darkGrey.withValues(alpha: 0.7),
                                 ),
                               ),
-                            const SizedBox(width: AppSizes.paddingMedium),
                             GestureDetector(
                               onTap: _editDirection,
                               child: Container(
@@ -340,10 +364,11 @@ class _BusStopDetailScreenState extends State<BusStopDetailScreen> {
                 ],
               ),
             ),
+            ),
           ),
           
           // Banner advert at the bottom
-          const BannerAdPlaceholder(),
+          if (!widget.embedded) const BannerAdPlaceholder(),
         ],
       ),
     );

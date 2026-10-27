@@ -10,6 +10,9 @@ class AppRatingService {
   static const String _ratingValueKey = 'user_rating_value';
   static const String _lastRatedVersionKey = 'last_rated_version';
   static const String _lowRatingLaunchCountKey = 'low_rating_launch_count';
+  // Launch on which the prompt was last answered with "Not Now", so it isn't
+  // offered again until the next 5th launch.
+  static const String _lastDeclinedLaunchKey = 'last_declined_launch';
   static const int _launchThreshold = 5; // Show rating popup every 5th launch
   static const int _lowRatingThreshold = 10; // Ask again in 10 uses for low ratings
 
@@ -49,43 +52,30 @@ class AppRatingService {
     }
   }
 
+  /// Every 5th launch until the user rates this version. A rating of 4+
+  /// stops the prompt for this version; a lower rating waits 10 launches
+  /// before asking again. "Not Now" just skips to the next 5th launch.
   static Future<bool> shouldShowRatingDialog() async {
     final prefs = await SharedPreferences.getInstance();
     final launchCount = await getLaunchCount();
     final currentVersion = await _getCurrentVersion();
     final lastRatedVersion = prefs.getString(_lastRatedVersionKey);
-    
-    // Check if user has rated this version with 4+ stars
-    if (prefs.getBool(_hasRatedKey) == true && 
+
+    if (prefs.getBool(_hasRatedKey) == true &&
         lastRatedVersion == currentVersion) {
       final ratingValue = prefs.getInt(_ratingValueKey) ?? 0;
       if (ratingValue >= 4) {
         return false; // Don't ask again for this version
       }
+      // Low rating: ask again after 10 more launches
+      final lowRatingLaunchCount = prefs.getInt(_lowRatingLaunchCountKey) ?? 0;
+      return lowRatingLaunchCount >= _lowRatingThreshold;
     }
-    
-    // Check if user declined (keep asking every 5 uses)
-    if (prefs.getBool(_hasDeclinedKey) == true) {
-      // Reset declined flag and continue with normal logic
-      if (launchCount % _launchThreshold == 0 && launchCount > 0) {
-        await prefs.remove(_hasDeclinedKey); // Reset declined flag
-        return true;
-      }
-      return false;
-    }
-    
-    // Check if user gave low rating (ask again in 10 uses)
-    if (prefs.getBool(_hasRatedKey) == true && 
-        lastRatedVersion == currentVersion) {
-      final ratingValue = prefs.getInt(_ratingValueKey) ?? 0;
-      if (ratingValue < 4) {
-        final lowRatingLaunchCount = prefs.getInt(_lowRatingLaunchCountKey) ?? 0;
-        return lowRatingLaunchCount >= _lowRatingThreshold;
-      }
-    }
-    
-    // First time or new version - ask every 5 uses
-    return launchCount % _launchThreshold == 0 && launchCount > 0;
+
+    // Not rated (or rated an older version): every 5th launch, but not
+    // again on the launch the user just said "Not Now" on.
+    if (prefs.getInt(_lastDeclinedLaunchKey) == launchCount) return false;
+    return launchCount > 0 && launchCount % _launchThreshold == 0;
   }
 
   static Future<void> markAsRated({int? ratingValue}) async {
@@ -108,6 +98,10 @@ class AppRatingService {
   static Future<void> markAsDeclined() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(_hasDeclinedKey, true);
+    await prefs.setInt(_lastDeclinedLaunchKey, await getLaunchCount());
+    // After a low rating, "Not Now" restarts the 10-launch wait rather than
+    // leaving the prompt due on every launch.
+    await prefs.setInt(_lowRatingLaunchCountKey, 0);
   }
 
   static Future<void> showRatingDialog(BuildContext context) async {
@@ -157,6 +151,7 @@ class AppRatingService {
     await prefs.remove(_ratingValueKey);
     await prefs.remove(_lastRatedVersionKey);
     await prefs.remove(_lowRatingLaunchCountKey);
+    await prefs.remove(_lastDeclinedLaunchKey);
   }
 }
 
@@ -182,10 +177,13 @@ class _RatingDialogState extends State<_RatingDialog> {
             size: 28,
           ),
           const SizedBox(width: 8),
-          const Text(
-            'Rate Wheres My Bus',
-            style: TextStyle(
-              fontWeight: FontWeight.bold,
+          // Wraps rather than overflowing on narrow screens.
+          const Expanded(
+            child: Text(
+              'Rate Where\'s My Bus?',
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+              ),
             ),
           ),
         ],

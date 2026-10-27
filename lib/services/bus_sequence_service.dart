@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/services.dart';
 import 'package:wheres_my_bus/services/data_update_service.dart';
+import 'package:wheres_my_bus/utils/csv_line.dart';
 
 class BusSequenceService {
   static List<Map<String, dynamic>>? _sequences;
@@ -10,15 +11,12 @@ class BusSequenceService {
     
     try {
       final String data = await DataUpdateService.getBusSequencesData();
-      final List<String> lines = data.split('\n');
-      
-      // Skip header line
-      final List<String> dataLines = lines.skip(1).where((line) => line.trim().isNotEmpty).toList();
-      
-      _sequences = dataLines.map((line) {
+      // Stop names can contain quoted commas and line breaks.
+      final List<List<String>> rows = parseCsv(data);
+
+      // Skip header row
+      _sequences = rows.skip(1).map((values) {
         try {
-          // Handle CSV with commas in stop names by using a more robust approach
-          final values = _parseCsvLine(line);
           if (values.length >= 7) {
             return {
               'route': values[0],
@@ -31,7 +29,7 @@ class BusSequenceService {
           }
         } catch (e) {
           // Skip malformed lines
-          print('Skipping malformed line: $line');
+          print('Skipping malformed line: ${values.join(',')}');
         }
         return null;
       }).where((seq) => seq != null).cast<Map<String, dynamic>>().toList();
@@ -135,27 +133,4 @@ class BusSequenceService {
     return finalStop.replaceAll('<>', '').trim();
   }
   
-  static List<String> _parseCsvLine(String line) {
-    final List<String> result = [];
-    final StringBuffer current = StringBuffer();
-    bool inQuotes = false;
-    
-    for (int i = 0; i < line.length; i++) {
-      final char = line[i];
-      
-      if (char == '"') {
-        inQuotes = !inQuotes;
-      } else if (char == ',' && !inQuotes) {
-        result.add(current.toString().trim());
-        current.clear();
-      } else {
-        current.write(char);
-      }
-    }
-    
-    // Add the last field
-    result.add(current.toString().trim());
-    
-    return result;
-  }
 }
