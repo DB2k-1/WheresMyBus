@@ -215,14 +215,18 @@ class _BusStopDetailScreenState extends State<BusStopDetailScreen> {
               top: false,
               // The banner keeps clear of the bottom inset when there is one.
               bottom: widget.embedded,
-              child: SingleChildScrollView(
+              // Narrow panes (e.g. the folded Duo in landscape) get a more compact
+              // header so the arrivals stay in view.
+              child: LayoutBuilder(builder: (context, constraints) {
+              final bool narrow = constraints.maxWidth < 420;
+              return SingleChildScrollView(
               padding: const EdgeInsets.only(bottom: AppSizes.paddingMedium),
               child: Column(
                 children: [
                   // Bus stop info header
                   Container(
                     width: double.infinity,
-                    padding: const EdgeInsets.all(AppSizes.paddingLarge),
+                    padding: EdgeInsets.all(narrow ? AppSizes.paddingMedium : AppSizes.paddingLarge),
                     margin: const EdgeInsets.all(AppSizes.paddingMedium),
                     decoration: BoxDecoration(
                       color: Colors.white,
@@ -245,7 +249,7 @@ class _BusStopDetailScreenState extends State<BusStopDetailScreen> {
                             Expanded(
                               child: Text(
                                 widget.busStop.displayName,
-                                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                                style: (narrow ? Theme.of(context).textTheme.titleLarge : Theme.of(context).textTheme.headlineSmall)?.copyWith(
                                   color: AppColors.darkGrey,
                                   fontWeight: FontWeight.bold,
                                 ),
@@ -372,7 +376,7 @@ class _BusStopDetailScreenState extends State<BusStopDetailScreen> {
                           padding: const EdgeInsets.all(AppSizes.paddingMedium),
                           child: Text(
                             'Bus Arrivals',
-                            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                            style: (narrow ? Theme.of(context).textTheme.titleLarge : Theme.of(context).textTheme.headlineSmall)?.copyWith(
                               color: AppColors.darkGrey,
                               fontWeight: FontWeight.bold,
                             ),
@@ -419,6 +423,8 @@ class _BusStopDetailScreenState extends State<BusStopDetailScreen> {
                   ),
                 ],
               ),
+            );
+              },
             ),
             ),
           ),
