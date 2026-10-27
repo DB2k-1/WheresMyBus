@@ -1,14 +1,19 @@
 import 'dart:async';
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:wheres_my_bus/models/bus_arrival.dart';
 import 'package:wheres_my_bus/services/tfl_api_service.dart';
 import 'package:wheres_my_bus/services/custom_direction_service.dart';
+import 'package:wheres_my_bus/services/location_service.dart';
 import 'package:wheres_my_bus/utils/constants.dart';
 import 'package:wheres_my_bus/widgets/bus_arrival_card.dart';
 import 'package:wheres_my_bus/widgets/banner_ad_placeholder.dart';
+import 'package:wheres_my_bus/widgets/bus_tracker_sheet.dart';
 import 'package:wheres_my_bus/widgets/detail_pane_scope.dart';
 import 'package:wheres_my_bus/widgets/edit_direction_dialog.dart';
+import 'package:wheres_my_bus/utils/stop_name.dart';
+import 'package:wheres_my_bus/widgets/interchange_badges.dart';
 
 class BusStopDetailScreen extends StatefulWidget {
   final dynamic busStop;
@@ -36,13 +41,21 @@ class _BusStopDetailScreenState extends State<BusStopDetailScreen> {
   bool _isLoading = true;
   String? _errorMessage;
   Timer? _refreshTimer;
+  // Redraws the countdowns between refreshes.
+  Timer? _tickTimer;
   String _displayDirection = '';
+  // How the stop is labelled on the street (letter, "towards").
+  StopInfo? _stopInfo;
+  // Where the stop is from the user, when their location is available.
+  double? _distanceMetres;
+  double? _bearingDegrees;
 
   @override
   void initState() {
     super.initState();
     _loadDisplayDirection();
     _loadBusArrivals();
+    _loadDistance();
     _startAutoRefresh();
   }
 
@@ -57,6 +70,7 @@ class _BusStopDetailScreenState extends State<BusStopDetailScreen> {
   @override
   void dispose() {
     _refreshTimer?.cancel();
+    _tickTimer?.cancel();
     super.dispose();
   }
 
@@ -65,20 +79,45 @@ class _BusStopDetailScreenState extends State<BusStopDetailScreen> {
     _refreshTimer = Timer.periodic(const Duration(seconds: 30), (timer) {
       if (mounted) {
         _loadBusArrivals();
+        _loadDistance();
       }
     });
+    _tickTimer = Timer.periodic(const Duration(seconds: 10), (_) {
+      if (mounted && _busArrivals.isNotEmpty) setState(() {});
+    });
+  }
+
+  /// Distance and compass direction from the user to the stop. Left blank
+  /// if their location isn't available.
+  Future<void> _loadDistance() async {
+    try {
+      final grid = await LocationService.getUKGridCoordinates();
+      final double dE = widget.busStop.locationEasting - grid['easting']!;
+      final double dN = widget.busStop.locationNorthing - grid['northing']!;
+      final double bearing = (math.atan2(dE, dN) * 180 / math.pi + 360) % 360;
+      if (!mounted) return;
+      setState(() {
+        _distanceMetres = math.sqrt(dE * dE + dN * dN);
+        _bearingDegrees = bearing;
+      });
+    } catch (_) {
+      // No location: the distance line just isn't shown.
+    }
   }
 
   Future<void> _loadBusArrivals() async {
     if (!mounted) return;
     
-    setState(() => _isLoading = true);
-    
+    // Only the first load shows a spinner; refreshes update the list in
+    // place instead of flashing it.
+    if (_busArrivals.isEmpty) setState(() => _isLoading = true);
+
     try {
-      final arrivals = await TflApiService.getBusArrivals(widget.busStop.naptanAtco);
+      final result = await TflApiService.getStopArrivals(widget.busStop.naptanAtco);
       if (mounted) {
         setState(() {
-          _busArrivals = arrivals;
+          _busArrivals = result.arrivals;
+          _stopInfo = result.stop ?? _stopInfo;
           _isLoading = false;
           _errorMessage = null;
         });
@@ -201,15 +240,11 @@ class _BusStopDetailScreenState extends State<BusStopDetailScreen> {
                       children: [
                         Row(
                           children: [
-                            Icon(
-                              Icons.directions_bus,
-                              color: AppColors.londonRed,
-                              size: 24,
-                            ),
+                            _buildStopFlag(),
                             const SizedBox(width: AppSizes.paddingSmall),
                             Expanded(
                               child: Text(
-                                widget.busStop.stopName,
+                                widget.busStop.displayName,
                                 style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                                   color: AppColors.darkGrey,
                                   fontWeight: FontWeight.bold,
@@ -271,6 +306,27 @@ class _BusStopDetailScreenState extends State<BusStopDetailScreen> {
                             ),
                           ],
                         ),
+                        if ((widget.busStop.interchanges as Set).isNotEmpty) ...[
+                          const SizedBox(height: AppSizes.paddingSmall),
+                          InterchangeBadges(
+                            interchanges: widget.busStop.interchanges as Set<Interchange>,
+                            large: true,
+                          ),
+                        ],
+                        if (_stopInfo?.towards != null) ...[
+                          const SizedBox(height: 4),
+                          Text(
+                            'Towards ${_stopInfo!.towards}',
+                            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                              color: AppColors.darkGrey,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                        if (_distanceMetres != null) ...[
+                          const SizedBox(height: AppSizes.paddingSmall),
+                          _buildDistance(),
+                        ],
                         const SizedBox(height: AppSizes.paddingSmall),
                         GestureDetector(
                           onTap: _openInMaps,
@@ -293,7 +349,7 @@ class _BusStopDetailScreenState extends State<BusStopDetailScreen> {
                             ],
                           ),
                         ),
-                        if (widget.busStop.distance != null) ...[
+                        if (_distanceMetres == null && widget.busStop.distance != null) ...[
                           const SizedBox(height: AppSizes.paddingSmall),
                           Text(
                             'Distance: ${(widget.busStop.distance! * 0.000621371).toStringAsFixed(1)} miles',
@@ -406,7 +462,85 @@ class _BusStopDetailScreenState extends State<BusStopDetailScreen> {
 
   Widget _buildBusArrivalsList() {
     return Column(
-      children: _busArrivals.map((arrival) => BusArrivalCard(arrival: arrival)).toList(),
+      children: [
+        for (final group in groupArrivalsByRoute(_busArrivals))
+          RouteArrivalsCard(
+            arrivals: group,
+            onTap: () => showBusTrackerSheet(
+              context,
+              arrivals: group,
+              stopNaptan: widget.busStop.naptanAtco,
+            ),
+          ),
+      ],
+    );
+  }
+
+  /// The stop's letter in a red roundel, as on the flag at the stop, or a
+  /// bus icon for stops without a letter.
+  Widget _buildStopFlag() {
+    final String? letter = _stopInfo?.indicator;
+    if (letter == null || letter.length > 3) {
+      return const Icon(Icons.directions_bus, color: AppColors.londonRed, size: 24);
+    }
+    return Semantics(
+      label: 'Stop $letter',
+      child: Container(
+        width: 40,
+        height: 40,
+        decoration: const BoxDecoration(
+          color: AppColors.londonRed,
+          shape: BoxShape.circle,
+        ),
+        child: Center(
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Padding(
+              padding: const EdgeInsets.all(6),
+              child: Text(
+                letter,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 20,
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// "120 m away · north-east", with an arrow pointing that way (north up).
+  Widget _buildDistance() {
+    final double metres = _distanceMetres!;
+    final double bearing = _bearingDegrees ?? 0;
+    final String distance = metres < 1000
+        ? '${(metres / 10).round() * 10} m away'
+        : '${(metres * 0.000621371).toStringAsFixed(1)} miles away';
+    const List<String> compass = [
+      'north', 'north-east', 'east', 'south-east',
+      'south', 'south-west', 'west', 'north-west',
+    ];
+    final String direction = compass[((bearing + 22.5) % 360 ~/ 45)];
+    return Row(
+      children: [
+        Transform.rotate(
+          angle: bearing * math.pi / 180,
+          child: const Icon(Icons.navigation, size: 18, color: AppColors.londonBlue),
+        ),
+        const SizedBox(width: 6),
+        Flexible(
+          child: Text(
+            metres < 25 ? 'You\'re at this stop' : '$distance · $direction',
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              color: AppColors.darkGrey,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

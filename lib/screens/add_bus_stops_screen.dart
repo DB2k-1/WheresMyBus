@@ -156,7 +156,7 @@ class _AddBusStopsScreenState extends State<AddBusStopsScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Added ${busStop.stopName}'),
+            content: Text('Added ${busStop.displayName}'),
             backgroundColor: AppColors.londonRed,
             duration: const Duration(seconds: 2),
           ),

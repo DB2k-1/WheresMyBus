@@ -1,65 +1,88 @@
 class BusArrival {
   final String routeId;
+
+  /// Where the bus is going, e.g. "Pimlico".
   final String destination;
-  final int timeToStation; // in seconds
   final String vehicleId;
   final String lineName;
+
+  /// The stop's "towards" text, e.g. "Westminster".
   final String direction;
+
+  /// The stop letter on the pole, e.g. "D".
   final String platformName;
   final String currentStopCode;
+  final DateTime expectedArrival;
 
   BusArrival({
     required this.routeId,
     required this.destination,
-    required this.timeToStation,
     required this.vehicleId,
     required this.lineName,
     required this.direction,
     required this.platformName,
     required this.currentStopCode,
+    required this.expectedArrival,
   });
 
-  factory BusArrival.fromTflApi(List<dynamic> apiData, String currentStopCode) {
-    // TfL API format: [1, "Stop Name", "Route", timestamp]
-    // We'll need to parse this based on the actual API response structure
-    return BusArrival(
-      routeId: apiData[2]?.toString() ?? '',
-      destination: apiData[1]?.toString() ?? '',
-      timeToStation: _parseTimeToStation(apiData[3]),
-      vehicleId: '', // Not provided in this API format
-      lineName: apiData[2]?.toString() ?? '',
-      direction: '', // Not provided in this API format
-      platformName: '', // Not provided in this API format
-      currentStopCode: currentStopCode,
-    );
+  /// Seconds until the bus arrives, counting down live from the prediction.
+  int get timeToStation {
+    final seconds = expectedArrival.difference(DateTime.now()).inSeconds;
+    return seconds > 0 ? seconds : 0;
   }
 
-  static int _parseTimeToStation(dynamic timestamp) {
-    if (timestamp == null) return 0;
-    
-    try {
-      final timestampInt = int.tryParse(timestamp.toString());
-      if (timestampInt != null) {
-        final now = DateTime.now().millisecondsSinceEpoch;
-        final arrivalTime = timestampInt;
-        final timeDiff = (arrivalTime - now) / 1000; // Convert to seconds
-        return timeDiff > 0 ? timeDiff.round() : 0;
-      }
-    } catch (e) {
-      // Handle parsing errors
-    }
-    return 0;
-  }
+  String get formattedTime => formatWait(timeToStation);
 
-  String get formattedTime {
-    if (timeToStation <= 0) return 'Due';
-    if (timeToStation < 60) return 'Under 1m';
-    if (timeToStation < 3600) return '${(timeToStation / 60).round()}m';
-    return '${(timeToStation / 3600).round()}h';
+  /// "Due", "1m" ... "59m", "1h".
+  static String formatWait(int seconds) {
+    if (seconds < 30) return 'Due';
+    if (seconds < 90) return '1m';
+    if (seconds < 3600) return '${(seconds / 60).round()}m';
+    return '${(seconds / 3600).round()}h';
   }
 
   @override
   String toString() {
     return 'BusArrival(route: $lineName, destination: $destination, time: $formattedTime)';
+  }
+}
+
+/// A stop as it's labelled on the street.
+class StopInfo {
+  final String name;
+
+  /// The letter on the stop flag, e.g. "D". Not every stop has one.
+  final String? indicator;
+
+  /// e.g. "Westminster", printed on the flag as "towards Westminster".
+  final String? towards;
+
+  const StopInfo({required this.name, this.indicator, this.towards});
+}
+
+class StopArrivals {
+  final StopInfo? stop;
+  final List<BusArrival> arrivals;
+
+  const StopArrivals({required this.stop, required this.arrivals});
+}
+
+/// One stop still ahead of a particular bus.
+class VehicleStop {
+  final String name;
+  final String naptanAtco;
+  final String? indicator;
+  final DateTime expectedArrival;
+
+  const VehicleStop({
+    required this.name,
+    required this.naptanAtco,
+    required this.indicator,
+    required this.expectedArrival,
+  });
+
+  int get timeToStation {
+    final seconds = expectedArrival.difference(DateTime.now()).inSeconds;
+    return seconds > 0 ? seconds : 0;
   }
 }

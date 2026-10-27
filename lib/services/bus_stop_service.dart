@@ -1,4 +1,5 @@
 import 'package:flutter/services.dart';
+import 'package:latlong_to_osgrid/latlong_to_osgrid.dart';
 import 'package:wheres_my_bus/models/bus_stop.dart';
 import 'package:wheres_my_bus/services/data_update_service.dart';
 import 'package:wheres_my_bus/utils/csv_line.dart';
@@ -72,52 +73,29 @@ class BusStopService {
   }
 
   // Convert GPS coordinates to UK grid coordinates using a more accurate approach
+  /// GPS (WGS84) to the OS National Grid eastings and northings used by
+  /// bus-stops.csv. Uses the proper OSGB36 conversion; the old flat
+  /// approximation put central London about 450 m too far south, so
+  /// "nearest" stops and distances were off.
   static Map<String, double> gpsToUKGrid(double latitude, double longitude) {
-    // The bus-stops.csv uses UK National Grid coordinates (OSGB36)
-    // We need to convert from WGS84 (GPS) to OSGB36 (UK Grid)
-    
-    // For London area, use a more accurate conversion
-    // The key insight is that UK grid coordinates are in meters from a specific reference point
-    // and the conversion factors need to be much more precise
-    
-    // For London area (roughly 51.0°N to 52.0°N, -1.0°W to 0.5°E)
-    if (latitude >= 51.0 && latitude <= 52.0 && longitude >= -1.0 && longitude <= 0.5) {
-      // London area - use more accurate conversion factors
-      // These factors are based on the actual UK grid system for the London area
-      
-      // The conversion from WGS84 to OSGB36 is complex, but we can use a simplified approach
-      // that's much more accurate than the previous version
-      
-      // For London, the conversion factors are roughly:
-      // 1 degree of latitude ≈ 111,000 meters
-      // 1 degree of longitude ≈ 69,000 meters (at London's latitude)
-      
-      // Central London reference point (Trafalgar Square)
-      const double londonLat = 51.5080;
-      const double londonLon = -0.1280;
-      const double londonEasting = 530000.0;
-      const double londonNorthing = 180000.0;
-      
-      // Convert from WGS84 to approximate OSGB36
-      // Use more accurate conversion factors for the London area
-      final double easting = londonEasting + (longitude - londonLon) * 69000.0;
-      final double northing = londonNorthing + (latitude - londonLat) * 111000.0;
-      
+    try {
+      final ref = LatLongConverter().getOSGBfromDec(latitude, longitude);
       return {
-        'easting': easting,
-        'northing': northing,
+        'easting': ref.easting.toDouble(),
+        'northing': ref.northing.toDouble(),
       };
-    } else {
-      // Outside London area - use general UK conversion
-      // UK grid coordinates are in meters from a reference point
-      final double easting = (longitude + 2.0) * 111000.0;
-      final double northing = (latitude - 49.0) * 111000.0;
-      
-      return {
-        'easting': easting,
-        'northing': northing,
-      };
+    } catch (e) {
+      return _approximateUKGrid(latitude, longitude);
     }
+  }
+
+  // Rough fallback if the conversion above fails.
+  static Map<String, double> _approximateUKGrid(double latitude, double longitude) {
+    // Trafalgar Square is at 51.5080, -0.1281 and E 529980, N 180480.
+    return {
+      'easting': 529980.0 + (longitude + 0.1281) * 69300.0,
+      'northing': 180480.0 + (latitude - 51.5080) * 111200.0,
+    };
   }
 
   // Search bus stops by name

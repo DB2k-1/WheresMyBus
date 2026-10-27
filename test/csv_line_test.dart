@@ -40,6 +40,8 @@ void main() {
       expect(stop.stopName, isNot(contains('"')), reason: row);
       expect(stop.stopName, isNot(contains('\n')), reason: row);
       expect(stop.locationEasting, greaterThan(0), reason: row);
+      // No TfL interchange markers left in the name people see.
+      expect(stop.displayName, isNot(matches(RegExp(r'[<>#\[\]]'))), reason: row);
     }
     final names = rows.skip(1).map((v) => v[3]);
     expect(names, contains('Guy, Earl of Warwick'));

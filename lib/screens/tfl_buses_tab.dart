@@ -110,7 +110,7 @@ class _TflBusesTabState extends State<TflBusesTab> {
 
   Future<void> _removeBusStop(BusStop busStop) async {
     final scaffoldMessenger = ScaffoldMessenger.of(context);
-    final busStopName = busStop.stopName;
+    final busStopName = busStop.displayName;
 
     final scope = context.getInheritedWidgetOfExactType<DetailPaneScope>();
 

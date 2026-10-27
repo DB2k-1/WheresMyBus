@@ -2,6 +2,7 @@ import 'dart:math';
 import 'package:wheres_my_bus/utils/direction_helper.dart';
 import 'package:wheres_my_bus/services/custom_direction_service.dart';
 import 'package:latlong_to_osgrid/latlong_to_osgrid.dart';
+import 'package:wheres_my_bus/utils/stop_name.dart';
 
 class BusStop {
   final String stopCodeLbsl;
@@ -14,6 +15,11 @@ class BusStop {
   final String stopArea;
   final bool virtualBusStop;
   final double? distance; // Distance from user location
+
+  /// The name to show, without TfL's interchange markers ("<>", "#",
+  /// "[dlr]"); [interchanges] says which they were.
+  String get displayName => StopName.parse(stopName).name;
+  Set<Interchange> get interchanges => StopName.parse(stopName).interchanges;
 
   BusStop({
     required this.stopCodeLbsl,

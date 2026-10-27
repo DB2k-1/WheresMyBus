@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:wheres_my_bus/utils/constants.dart';
 import 'package:wheres_my_bus/services/custom_direction_service.dart';
+import 'package:wheres_my_bus/utils/stop_name.dart';
+import 'package:wheres_my_bus/widgets/interchange_badges.dart';
 
 class BusStopCard extends StatefulWidget {
   final dynamic busStop;
@@ -107,7 +109,7 @@ class _BusStopCardState extends State<BusStopCard> {
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Text(
-                            widget.busStop.stopName,
+                            widget.busStop.displayName,
                             style: Theme.of(context).textTheme.titleMedium?.copyWith(
                               color: AppColors.darkGrey,
                               fontWeight: FontWeight.bold,
@@ -152,6 +154,9 @@ class _BusStopCardState extends State<BusStopCard> {
                                     fontSize: 11,
                                   ),
                                 ),
+                              ),
+                              InterchangeBadges(
+                                interchanges: widget.busStop.interchanges as Set<Interchange>,
                               ),
                             ],
                           ),
